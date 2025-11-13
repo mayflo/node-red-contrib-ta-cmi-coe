@@ -317,6 +317,107 @@ module.exports = function(RED) {
     }
     RED.nodes.registerType("coe-input", CoEInputNode);
 
+    // Cache für Block-Zustände und Sending-Queues
+    const blockStateCache = {};
+    const blockQueues = {};
+    const blockTimers = {};
+
+    const DEBOUNCE_DELAY = 50; // ms - Zeit zum Sammeln von Nachrichten
+
+    function getBlockState(nodeNumber, blockNumber, dataType) {
+        const key = `${nodeNumber}-${blockNumber}-${dataType}`;
+        if (!blockStateCache[key]) {
+            if (dataType === 'analog') {
+                blockStateCache[key] = [0, 0, 0, 0];
+            } else {
+                blockStateCache[key] = new Array(16).fill(0);
+            }
+        }
+        return blockStateCache[key];
+    }
+
+    function setBlockState(nodeNumber, blockNumber, dataType, values) {
+        const key = `${nodeNumber}-${blockNumber}-${dataType}`;
+        blockStateCache[key] = [...values];
+    }
+
+    function getQueueKey(nodeNumber, blockNumber, dataType) {
+        return `${nodeNumber}-${blockNumber}-${dataType}`;
+    }
+
+    function queueAndSend(node, nodeNumber, blockNumber, values, units, dataType, version, cmiConfig, cmiAddress) {
+        const queueKey = getQueueKey(nodeNumber, blockNumber, dataType);
+        
+        // Merge mit aktuellen Block-Werten
+        let mergedValues = getBlockState(nodeNumber, blockNumber, dataType);
+        
+        if (dataType === 'analog') {
+            for (let i = 0; i < 4; i++) {
+                if (values[i] !== undefined) {
+                    mergedValues[i] = values[i];
+                }
+            }
+        } else {
+            for (let i = 0; i < 16; i++) {
+                if (values[i] !== undefined) {
+                    mergedValues[i] = values[i];
+                }
+            }
+        }
+        
+        // Speichere in Queue
+        if (!blockQueues[queueKey]) {
+            blockQueues[queueKey] = {
+                values: mergedValues,
+                units: units,
+                node: node,
+                timestamp: Date.now()
+            };
+        } else {
+            // Merge mit bestehenden Queue-Einträgen
+            blockQueues[queueKey].values = mergedValues;
+            if (units) {
+                blockQueues[queueKey].units = units;
+            }
+        }
+        
+        // Lösche alten Timer
+        if (blockTimers[queueKey]) {
+            clearTimeout(blockTimers[queueKey]);
+        }
+        
+        // Starte neuen Timer - sendet nach Verzögerung
+        blockTimers[queueKey] = setTimeout(() => {
+            const queued = blockQueues[queueKey];
+            if (queued) {
+                const packet = createCoEPacket(
+                    nodeNumber,
+                    blockNumber,
+                    queued.values,
+                    queued.units,
+                    dataType,
+                    version
+                );
+                
+                setBlockState(nodeNumber, blockNumber, dataType, queued.values);
+                cmiConfig.send(cmiAddress, packet);
+                
+                queued.node.status({
+                    fill: "green",
+                    shape: "dot",
+                    text: `sent (merged) [${version}]`
+                });
+                
+                setTimeout(() => {
+                    queued.node.status({fill: "grey", shape: "ring", text: `ready [${version}]`});
+                }, 2000);
+                
+                delete blockQueues[queueKey];
+                delete blockTimers[queueKey];
+            }
+        }, DEBOUNCE_DELAY);
+    }
+
     // ============================================
     // CoE Output Node (Senden von Werten)
     // ============================================
@@ -343,61 +444,28 @@ module.exports = function(RED) {
             let values, units;
             
             if (node.dataType === 'analog') {
-                // 4 Werte für analogen Block
-                values = [0, 0, 0, 0];
+                values = [undefined, undefined, undefined, undefined];
                 units = [node.unit, node.unit, node.unit, node.unit];
                 
-                // Wert an korrekter Position einfügen
                 values[blockInfo.position] = parseFloat(msg.payload) || 0;
                 
-                // Optionale Units aus msg.coe
                 if (msg.coe && msg.coe.unit !== undefined) {
                     units[blockInfo.position] = parseInt(msg.coe.unit);
                 }
                 
             } else {
-                // 16 Werte für digitalen Block
-                values = new Array(16).fill(0);
+                values = new Array(16).fill(undefined);
                 values[blockInfo.position] = msg.payload ? 1 : 0;
                 units = null;
             }
             
-            // Paket erstellen und senden
-            const packet = createCoEPacket(
-                node.nodeNumber, 
-                blockInfo.block, 
-                values, 
-                units, 
-                node.dataType,
-                version
-            );
-            
-            // DEBUG: UDP Paket an Ausgang schicken
-            node.send([msg, {
-                payload: {
-                    debug: {
-                        hex: packet.toString('hex').toUpperCase(),
-                        node: node.nodeNumber,
-                        block: blockInfo.block,
-                        dataType: node.dataType,
-                        version: version
-                    }
-                }
-            }]);
-            
-            node.cmiConfig.send(node.cmiAddress, packet);
-            
-            const unitInfo = getUnitInfo(units ? units[blockInfo.position] : null);
             node.status({
-                fill:"green", 
-                shape:"dot", 
-                text:`sent: ${msg.payload} ${unitInfo.symbol || ''} [${version}]`
+                fill: "yellow",
+                shape: "dot",
+                text: `queued (${DEBOUNCE_DELAY}ms) [${version}]`
             });
             
-            // Status nach 2 Sekunden zurücksetzen
-            setTimeout(() => {
-                node.status({fill:"grey", shape:"ring", text:`ready [${version}]`});
-            }, 2000);
+            queueAndSend(node, node.nodeNumber, blockInfo.block, values, units, node.dataType, version, node.cmiConfig, node.cmiAddress);
         });
         
         node.status({fill:"grey", shape:"ring", text:`ready [${version}]`});
@@ -428,14 +496,12 @@ module.exports = function(RED) {
             let values, units;
             
             if (node.dataType === 'analog') {
-                // Erwarte Array mit 4 Werten
                 if (!Array.isArray(msg.payload) || msg.payload.length !== 4) {
                     node.error("Payload must be array of 4 values for analog block");
                     return;
                 }
                 values = msg.payload.map(v => parseFloat(v) || 0);
                 
-                // Optional: Units aus msg.coe.units
                 if (msg.coe && Array.isArray(msg.coe.units) && msg.coe.units.length === 4) {
                     units = msg.coe.units;
                 } else {
@@ -443,10 +509,9 @@ module.exports = function(RED) {
                 }
                 
             } else {
-                // Erwarte Array mit 16 Werten oder String mit 16 Bits
                 if (typeof msg.payload === 'string') {
                     if (msg.payload.length !== 16) {
-                        node.error("Payload string must be 16 characters (0 or 1)");
+                        node.error("Payload string must be 16 characters");
                         return;
                     }
                     values = msg.payload.split('').map(c => c === '1' ? 1 : 0);
@@ -463,43 +528,32 @@ module.exports = function(RED) {
                 units = null;
             }
             
-            // Paket erstellen und senden
+            // DIREKT senden - kein Debouncing!
+            // Das ist der Mehrwert: vollständige atomare Block-Updates
             const packet = createCoEPacket(
-                node.nodeNumber, 
-                node.blockNumber, 
-                values, 
-                units, 
+                node.nodeNumber,
+                node.blockNumber,
+                values,
+                units,
                 node.dataType,
                 version
             );
-
-            // DEBUG: UDP Paket an Ausgang schicken
-            node.send([msg, {
-                payload: {
-                    debug: {
-                        hex: packet.toString('hex').toUpperCase(),
-                        node: node.nodeNumber,
-                        block: blockInfo.block,
-                        dataType: node.dataType,
-                        version: version
-                    }
-                }
-            }]);
             
+            setBlockState(node.nodeNumber, node.blockNumber, node.dataType, values);
             node.cmiConfig.send(node.cmiAddress, packet);
             
             node.status({
-                fill:"green", 
-                shape:"dot", 
-                text:`sent block ${node.blockNumber} [${version}]`
+                fill: "green",
+                shape: "dot",
+                text: `sent block ${node.blockNumber} (atomic) [${version}]`
             });
             
             setTimeout(() => {
-                node.status({fill:"grey", shape:"ring", text:`ready [${version}]`});
+                node.status({fill: "grey", shape: "ring", text: `ready [${version}]`});
             }, 2000);
         });
         
-        node.status({fill:"grey", shape:"ring", text:`ready [${version}]`});
+        node.status({fill:"grey", shape:"ring", text:`ready (atomic) [${version}]`});
     }
     RED.nodes.registerType("coe-block-output", CoEBlockOutputNode);
 
