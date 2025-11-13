@@ -473,7 +473,7 @@ module.exports = function(RED) {
     RED.nodes.registerType("coe-output", CoEOutputNode);
 
     // ============================================
-    // CoE Block Output Node (Mehrere Werte gleichzeitig senden)
+    // CoE Block Output Node (mit 4 Input-Ports)
     // ============================================
     function CoEBlockOutputNode(config) {
         RED.nodes.createNode(this, config);
@@ -484,6 +484,7 @@ module.exports = function(RED) {
         node.nodeNumber = parseInt(config.nodeNumber) || 1;
         node.blockNumber = parseInt(config.blockNumber) || 1;
         node.dataType = config.dataType || 'analog';
+        node.sendMode = config.sendMode || 'change'; // 'change' oder 'immediate'
         
         if (!node.cmiConfig) {
             node.error("CoE Configuration missing");
@@ -491,50 +492,37 @@ module.exports = function(RED) {
         }
 
         const version = node.cmiConfig.coeVersion;
+        
+        // Puffer für die 4 Eingangswerte (oder 16 für digital)
+        let inputBuffer = {
+            values: node.dataType === 'analog' ? [0, 0, 0, 0] : new Array(16).fill(0),
+            units: node.dataType === 'analog' ? [0, 0, 0, 0] : null,
+            lastUpdate: [0, 0, 0, 0] // Timestamp für Änderungserkennung
+        };
+        
+        let sendTimer = null;
 
-        node.on('input', function(msg) {
-            let values, units;
+        function sendBlock() {
+            // Hole aktuellen Block-Zustand (merge mit externen Änderungen)
+            let values = getBlockState(node.nodeNumber, node.blockNumber, node.dataType);
             
+            // Merge mit Input-Buffer
             if (node.dataType === 'analog') {
-                if (!Array.isArray(msg.payload) || msg.payload.length !== 4) {
-                    node.error("Payload must be array of 4 values for analog block");
-                    return;
+                for (let i = 0; i < 4; i++) {
+                    values[i] = inputBuffer.values[i];
                 }
-                values = msg.payload.map(v => parseFloat(v) || 0);
-                
-                if (msg.coe && Array.isArray(msg.coe.units) && msg.coe.units.length === 4) {
-                    units = msg.coe.units;
-                } else {
-                    units = [0, 0, 0, 0];
-                }
-                
             } else {
-                if (typeof msg.payload === 'string') {
-                    if (msg.payload.length !== 16) {
-                        node.error("Payload string must be 16 characters");
-                        return;
-                    }
-                    values = msg.payload.split('').map(c => c === '1' ? 1 : 0);
-                } else if (Array.isArray(msg.payload)) {
-                    if (msg.payload.length !== 16) {
-                        node.error("Payload array must have 16 values");
-                        return;
-                    }
-                    values = msg.payload.map(v => v ? 1 : 0);
-                } else {
-                    node.error("Payload must be array or string for digital block");
-                    return;
+                for (let i = 0; i < 16; i++) {
+                    values[i] = inputBuffer.values[i];
                 }
-                units = null;
             }
             
-            // DIREKT senden - kein Debouncing!
-            // Das ist der Mehrwert: vollständige atomare Block-Updates
+            // Paket erstellen und senden
             const packet = createCoEPacket(
                 node.nodeNumber,
                 node.blockNumber,
                 values,
-                units,
+                inputBuffer.units,
                 node.dataType,
                 version
             );
@@ -545,15 +533,97 @@ module.exports = function(RED) {
             node.status({
                 fill: "green",
                 shape: "dot",
-                text: `sent block ${node.blockNumber} (atomic) [${version}]`
+                text: `sent block ${node.blockNumber} [${node.dataType}]`
             });
             
             setTimeout(() => {
-                node.status({fill: "grey", shape: "ring", text: `ready [${version}]`});
+                node.status({fill: "grey", shape: "ring", text: `ready`});
             }, 2000);
+        }
+
+        // Eingänge definieren
+        if (node.dataType === 'analog') {
+            // 4 Analogue Eingänge
+            for (let i = 1; i <= 4; i++) {
+                node.on(`input${i}`, function(msg) {
+                    const index = i - 1;
+                    const newValue = parseFloat(msg.payload);
+                    
+                    if (isNaN(newValue)) {
+                        node.error(`Input ${i}: Invalid number: ${msg.payload}`);
+                        return;
+                    }
+                    
+                    // Wert im Buffer speichern
+                    inputBuffer.values[index] = newValue;
+                    
+                    // Unit aktualisieren (falls vorhanden)
+                    if (msg.coe && msg.coe.unit !== undefined) {
+                        inputBuffer.units[index] = parseInt(msg.coe.unit);
+                    }
+                    
+                    inputBuffer.lastUpdate[index] = Date.now();
+                    
+                    // Status: Zeige alle 4 Werte
+                    const displayValues = inputBuffer.values.map(v => v.toFixed(1)).join(' | ');
+                    node.status({
+                        fill: "yellow",
+                        shape: "dot",
+                        text: `[${displayValues}]`
+                    });
+                    
+                    // Sende je nach Mode
+                    if (node.sendMode === 'immediate') {
+                        sendBlock();
+                    } else if (node.sendMode === 'change') {
+                        // Debounce: sende nach 100ms wenn keine neuen Änderungen kommen
+                        if (sendTimer) {
+                            clearTimeout(sendTimer);
+                        }
+                        sendTimer = setTimeout(sendBlock, 100);
+                    }
+                });
+            }
+        } else {
+            // 16 Digitale Eingänge (oder gruppiert in 4er)
+            for (let i = 1; i <= 16; i++) {
+                node.on(`input${i}`, function(msg) {
+                    const index = i - 1;
+                    inputBuffer.values[index] = msg.payload ? 1 : 0;
+                    inputBuffer.lastUpdate[index] = Date.now();
+                    
+                    // Status: Zeige alle 16 Bits (4er Gruppen)
+                    let displayBits = '';
+                    for (let j = 0; j < 16; j++) {
+                        displayBits += inputBuffer.values[j] ? '1' : '0';
+                        if ((j + 1) % 4 === 0) displayBits += ' ';
+                    }
+                    node.status({
+                        fill: "yellow",
+                        shape: "dot",
+                        text: displayBits
+                    });
+                    
+                    if (node.sendMode === 'immediate') {
+                        sendBlock();
+                    } else if (node.sendMode === 'change') {
+                        if (sendTimer) {
+                            clearTimeout(sendTimer);
+                        }
+                        sendTimer = setTimeout(sendBlock, 100);
+                    }
+                });
+            }
+        }
+
+        // Cleanup
+        node.on('close', function() {
+            if (sendTimer) {
+                clearTimeout(sendTimer);
+            }
         });
         
-        node.status({fill:"grey", shape:"ring", text:`ready (atomic) [${version}]`});
+        node.status({fill: "grey", shape: "ring", text: "ready (buffered)"});
     }
     RED.nodes.registerType("coe-block-output", CoEBlockOutputNode);
 
