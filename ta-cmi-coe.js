@@ -1,5 +1,5 @@
 // ta-cmi-coe.js - Node-RED Nodes für TA CMI CoE (CAN over Ethernet)
-// Unterstützt CoE V1 (und V2)
+// Unterstützt CoE V1 (V2 geplant)
 
 module.exports = function(RED) {
     "use strict";
@@ -325,16 +325,15 @@ module.exports = function(RED) {
         const node = this;
         
         node.cmiConfig = RED.nodes.getNode(config.cmiconfig);
-        
-        if (!node.cmiConfig) {
-            node.error("CoE Configuration missing");
-            return;
-            
         node.cmiAddress = node.cmiConfig.address;
         node.nodeNumber = parseInt(config.nodeNumber) || 1;
         node.outputNumber = parseInt(config.outputNumber) || 1;
         node.dataType = config.dataType || 'analog';
         node.unit = parseInt(config.unit) || 0;
+        
+        if (!node.cmiConfig) {
+            node.error("CoE Configuration missing");
+            return;
         }
 
         const version = node.cmiConfig.coeVersion;
@@ -372,6 +371,20 @@ module.exports = function(RED) {
                 node.dataType,
                 version
             );
+            
+            // DEBUG: UDP Paket an Ausgang schicken
+            node.send([msg, {
+                payload: {
+                    debug: {
+                        hex: packet.toString('hex').toUpperCase(),
+                        node: node.nodeNumber,
+                        block: blockInfo.block,
+                        dataType: node.dataType,
+                        version: version
+                    }
+                }
+            }]);
+            
             node.cmiConfig.send(node.cmiAddress, packet);
             
             const unitInfo = getUnitInfo(units ? units[blockInfo.position] : null);
@@ -399,15 +412,14 @@ module.exports = function(RED) {
         const node = this;
         
         node.cmiConfig = RED.nodes.getNode(config.cmiconfig);
-        
-        if (!node.cmiConfig) {
-            node.error("CoE Configuration missing");
-            return;
-            
         node.cmiAddress = node.cmiConfig.address;
         node.nodeNumber = parseInt(config.nodeNumber) || 1;
         node.blockNumber = parseInt(config.blockNumber) || 1;
         node.dataType = config.dataType || 'analog';
+        
+        if (!node.cmiConfig) {
+            node.error("CoE Configuration missing");
+            return;
         }
 
         const version = node.cmiConfig.coeVersion;
@@ -460,6 +472,20 @@ module.exports = function(RED) {
                 node.dataType,
                 version
             );
+
+            // DEBUG: UDP Paket an Ausgang schicken
+            node.send([msg, {
+                payload: {
+                    debug: {
+                        hex: packet.toString('hex').toUpperCase(),
+                        node: node.nodeNumber,
+                        block: blockInfo.block,
+                        dataType: node.dataType,
+                        version: version
+                    }
+                }
+            }]);
+            
             node.cmiConfig.send(node.cmiAddress, packet);
             
             node.status({
@@ -579,7 +605,7 @@ module.exports = function(RED) {
             for (let i = 0; i < 4; i++) {
                 const unitId = units ? units[i] : 0;
                 const rawValue = unconvertValue(values[i], unitId);
-                buffer.writeInt32BE(rawValue, 2 + i * 4); // 4 Bytes
+                buffer.writeInt32LE(rawValue, 2 + i * 4); // Gleiche Reihenfolge wie Parsen
                 buffer.writeUInt8(unitId, 18 + i);
             }
             
@@ -598,7 +624,8 @@ module.exports = function(RED) {
                     console.warn(`Value ${values[i]} exceeds V1 limits for unit ${unitId}. Consider using V2.`);
                 }
                 
-                buffer.writeInt16BE(Math.max(-32768, Math.min(32767, rawValue)), 2 + i * 2);
+                // LE statt BE verwenden (konsistent mit Parsen)
+                buffer.writeInt16LE(Math.max(-32768, Math.min(32767, rawValue)), 2 + i * 2);
                 buffer.writeUInt8(unitId, 10 + i);
             }
         }
