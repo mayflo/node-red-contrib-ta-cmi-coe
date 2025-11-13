@@ -4,16 +4,17 @@
 
 Node-RED Bibliothek zum Lesen und Schreiben von Werten an Technische Alternative CMI über CAN over Ethernet (CoE).
 
-Basierend auf dem Protokoll-Verständnis von [SymconJoTTACoE](https://github.com/jotata/SymconJoTTACoE/).
+Eine offizielle Schnittstellen-Dokumentation durch TA fehlt. Die Umsetzung von CoE V1 basiert auf dem Protokoll-Verständnis von [SymconJoTTACoE](https://github.com/jotata/SymconJoTTACoE/).
 
 ## Funktionsumfang
 
-- **CoE Input Node**: Empfang von analogen und digitalen Werten von der CMI
+- **CoE Input Node**: Empfang von analogen und digitalen Einzelwerten von der CMI
 - **CoE Output Node**: Senden einzelner Werte an die CMI/Regler
 - **CoE Block Output Node**: Senden kompletter Datenblöcke (effizient)
+- **CoE Monitor**: Empfängt und überwacht Pakete von allen Quellen
 - Automatische Konvertierung analoger Werte basierend auf Unit ID
-- Unterstützung für alle von TA definierten Messgrößen
-- Gemeinsamer UDP Socket für alle Nodes (Port 5441)
+- Unterstützung für von TA definierte Messgrößen
+- Konfiguration von CMI und CoE-Version
 
 ## Installation
 
@@ -44,43 +45,19 @@ npm link node-red-contrib-ta-cmi-coe
 
 Starte Node-RED neu.
 
-## 📝 Einheiten verwalten
-
-**Alle Einheiten werden zentral in `units-config.js` definiert!**
-
-### Neue Einheit hinzufügen:
-
-```javascript
-// units-config.js - Im UNITS Object ergänzen:
-999: { name: 'Meine Custom Unit', symbol: 'MCU', decimals: 3 }
-```
-
-### Einheit ändern:
-
-```javascript
-// units-config.js - Bestehende Einheit ändern:
-44: { name: 'Kilowatt Leistung', symbol: 'kW', decimals: 2 } // war: decimals: 1
-```
-
-**Das war's!** Nach Node-RED Neustart erscheint die Einheit automatisch:
-- ✅ Im Output Node Dropdown
-- ✅ Bei der Konvertierung (convertValue/unconvertValue)
-- ✅ In allen Node-Status Anzeigen
-
-### ⚠️ Wichtig:
-**Ändere NIEMALS Einheiten in `ta-cmi-coe.js` oder `ta-cmi-coe.html`!**
-Diese Dateien importieren die Einheiten automatisch aus `units-config.js`.
-
 ## Voraussetzungen
 
 - Node-RED v1.0.0 oder höher
 - CMI von Technische Alternative mit Firmware 1.39.1 oder höher
-- Für Empfang: CoE-Ausgänge müssen auf der CMI konfiguriert sein
-- Für Senden: CAN-Eingänge müssen auf dem Regler konfiguriert sein
+- Die verwendete CoE-Version wird auf dem CMI konfiguriert (Einstellungen > CAN > CoE).
+- Für Empfang: CoE-Ausgänge müssen auf der CMI konfiguriert werden (Einstellungen > Ausgänge > CoE).
+- Für Senden: CAN-Eingänge müssen auf dem Regler konfiguriert werden.
+- Für den Empfang von Nachrichten benötigt die verwendeten CMIs eine fest eingestellte IP-Addresse
+- Die Kommunikation erfolgt über UDP-Ports, welche auf dem Node-RED-Host geöffnet werden müssen (CoE V1 Port 5441 / CoE V2 Port 5442)
 
 ## Unterstützte Geräte
 
-Die Bibliothek wurde für UVR16x2 entwickelt und getestet, funktioniert aber grundsätzlich mit allen Geräten, die über den CAN-Bus der CMI verbunden sind:
+Die Bibliothek wurde für UVR610 entwickelt und getestet, funktioniert aber grundsätzlich mit allen Geräten, die über den CAN-Bus der CMI verbunden sind:
 
 - UVR16x2
 - UVR1611
@@ -90,15 +67,13 @@ Die Bibliothek wurde für UVR16x2 entwickelt und getestet, funktioniert aber gru
 
 ## Schnellstart
 
-### 1. CoE Configuration Node erstellen
+### 1. CMI Configuration Node erstellen
 
-Erstelle zunächst eine CoE Configuration:
+Erstelle zunächst eine CMI Configuration:
 - Öffne einen beliebigen Node zur Bearbeitung
-- Bei "CoE Config" auf den Stift klicken → "Add new coe-config..."
-- **UDP Port**: 5441 (Standard)
-- **Local Address**: 0.0.0.0 (alle Interfaces)
-
-**Wichtig**: Verwende dieselbe Config für alle Nodes!
+- Bei "CMI Config" auf Plus klicken → "Add new CMI-config..."
+- **CMI Address**: (Feste) IP-Addresse des CMI
+- **CoE Version**: CoE V1 (Standard)
 
 ### 2. CMI konfigurieren
 
@@ -124,12 +99,10 @@ Auf dem Regler: CAN-Eingang konfigurieren
         "id": "input_example",
         "type": "coe-input",
         "name": "Temperatur Sensor",
-        "coeconfig": "coe_config_id",
-        "cmiAddress": "192.168.1.100",
+        "cmiconfig": "cmi_config_id",
         "nodeNumber": 10,
         "outputNumber": 1,
         "dataType": "analog",
-        "receiveAll": false,
         "x": 150,
         "y": 100
     },
@@ -155,8 +128,7 @@ Auf dem Regler: CAN-Eingang konfigurieren
         "id": "output_example",
         "type": "coe-output",
         "name": "Sollwert Heizung",
-        "coeconfig": "coe_config_id",
-        "cmiAddress": "192.168.1.100",
+        "cmiconfig": "cmi_config_id",
         "nodeNumber": 11,
         "outputNumber": 5,
         "dataType": "analog",
@@ -209,13 +181,12 @@ msg.coe = { unit: 1 };  // Überschreibt Config
 **Unterstützte Units:**
 - 0: Dimensionslos
 - 1: °C (Celsius)
-- 4: % (Prozent)
-- 5: kW (Kilowatt)
-- 6: kWh (Kilowattstunde)
-- 22: bar
-- 44: kW (Leistung, 1 Nachkommastelle)
-- 1009: mbar
-- [Weitere siehe Code]
+- 8: % (Prozent)
+- 10: kW (Kilowatt)
+- 11: kWh (Kilowattstunde)
+- 23: bar
+- 65: mbar
+- [Weitere siehe units-config.js]
 
 ### CoE Block Output Node
 
@@ -266,7 +237,7 @@ Jedes CoE-Paket ist 14 Bytes groß:
 **Analog:**
 ```
 Byte 0-1:   Knoten-Nr, Block-Nr
-Byte 2-9:   4x Wert (Int16 BigEndian)
+Byte 2-9:   4x Wert (Int16 BigEndian) Stimmt das wirklich - für kleinere Wert wird nur der 1.Byte verwendet???
 Byte 10-13: 4x Unit ID
 ```
 
@@ -408,7 +379,12 @@ Basiert auf dem Protokoll-Verständnis und der Dokumentation von:
 
 ## Changelog
 
-### Version 1.0.0
+### Version 0.9.1
+- Vorbereitungen für zweisprachige Version
+- Fehlerbehebung Output-Nodes
+- Ergänzungen Dokumentation
+
+### Version 0.9.0
 - Initiale Veröffentlichung
 - CoE Input, Output und Block Output Nodes
 - Automatische Unit-Konvertierung
