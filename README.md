@@ -394,7 +394,7 @@ Basiert auf dem Protokoll-Verständnis und der Dokumentation von:
 
 ## Autor
 
-Florian Mayrhofer / mayflo
+mayflo
 
 ## Spenden
 
