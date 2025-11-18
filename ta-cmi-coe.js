@@ -1,5 +1,5 @@
 // ta-cmi-coe.js - Node-RED Nodes für TA CMI CoE (CAN over Ethernet)
-// Unterstützt CoE V1 (V2 geplant)
+// Unterstützt CoE V1 und V2
 
 module.exports = function(RED) {
     "use strict";
@@ -714,7 +714,7 @@ module.exports = function(RED) {
     });
 
     // ============================================
-    // HILFSFUNKTIONEN
+    // HILFSFUNKTIONEN (nur intern genutzt)
     // ============================================
     
     // Zentrale Funktion für Unit-Informationen
@@ -727,67 +727,69 @@ module.exports = function(RED) {
         return { name: `Unknown (${unitId})`, symbol: '', decimals: 0 };
     }
     
-    // CoE Paket parsen (unterstützt V1 und V2)
+    // CoE Paket parsen
     function parseCoEPacket(buffer, version) {
+        // V2 Protokoll verwenden
+        if (version === 2) {
+            const v2Data = parseCoEV2Packet(buffer);
+            if (!v2Data) return null;
+            
+            // Konvertiere zu Legacy-Format für Kompatibilität
+            const legacyBlocks = convertV2ToLegacyFormat(v2Data);
+            
+            // Gib alle Blöcke zurück (kann mehrere sein)
+            return legacyBlocks;
+        }
+        
         const nodeNumber = buffer.readUInt8(0);
         const blockNumber = buffer.readUInt8(1);
         
         let values = [];
         let units = null;
         
-        // Block 0 oder 9: Digital (16 Bits) - gleich in V1 und V2
         if (blockNumber === 0 || blockNumber === 9) {
+            // Digital
             const bitField = buffer.readUInt16LE(2);
             for (let i = 0; i < 16; i++) {
                 values.push((bitField >> i) & 1);
             }
-        } 
-        // Block 1-8: Analog (4 Werte)
-        else {
+        } else {
+            // Analog V1
             units = [];
-            
-            if (version === 2 && buffer.length === COE_V2_ANALOG_PACKET_SIZE) {
-                // CoE V2: 4 Byte Integer (Int32)
-                for (let i = 0; i < 4; i++) {
-                    const value = buffer.readInt32LE(2 + i * 4); // 4 Bytes pro Wert
-                    const unitId = buffer.readUInt8(18 + i);
-                    
-                    const convertedValue = convertValue(value, unitId);
-                    values.push(convertedValue);
-                    units.push(unitId);
-                }
-            } else {
-                // CoE V1: 2 Byte Integer (Int16)
-                for (let i = 0; i < 4; i++) {
-                    const value = buffer.readInt16LE(2 + i * 2); // 2 Bytes pro Wert
-                    const unitId = buffer.readUInt8(10 + i);
-                    
-                    const convertedValue = convertValue(value, unitId);
-                    values.push(convertedValue);
-                    units.push(unitId);
-                }
+            for (let i = 0; i < 4; i++) {
+                const value = buffer.readInt16LE(2 + i * 2);
+                const unitId = buffer.readUInt8(10 + i);
+                
+                const convertedValue = convertValue(value, unitId, 1); // V1 Dezimalstellen
+                values.push(convertedValue);
+                units.push(unitId);
             }
         }
         
-        return {
+        return [{
             nodeNumber: nodeNumber,
             blockNumber: blockNumber,
             values: values,
             units: units
-        };
+        }];
     }
     
-    // CoE Paket erstellen (unterstützt V1 und V2)
+    // CoE Paket erstellen
     function createCoEPacket(nodeNumber, blockNumber, values, units, dataType, version) {
+        // V2 Protokoll verwenden
+        if (version === 2) {
+            const outputs = convertLegacyToV2Format(nodeNumber, blockNumber, values, units, dataType);
+            return createCoEV2Packet(nodeNumber, outputs);
+        }
+        
+        // V1 Protokoll
         let buffer;
         
         if (dataType === 'digital') {
-            // Digital bleibt gleich in V1 und V2
-            buffer = Buffer.alloc(COE_V1_PACKET_SIZE);
+            buffer = Buffer.alloc(14);
             buffer.writeUInt8(nodeNumber, 0);
             buffer.writeUInt8(blockNumber, 1);
             
-            // 16 Bits als UInt16LE schreiben
             let bitField = 0;
             for (let i = 0; i < 16; i++) {
                 if (values[i]) {
@@ -797,35 +799,20 @@ module.exports = function(RED) {
             buffer.writeUInt16LE(bitField, 2);
             buffer.fill(0, 4, buffer.length);
             
-        } else if (version === 2) {
-            // CoE V2: Analog mit Int32 (4 Bytes pro Wert)
-            buffer = Buffer.alloc(COE_V2_ANALOG_PACKET_SIZE);
-            buffer.writeUInt8(nodeNumber, 0);
-            buffer.writeUInt8(blockNumber, 1);
-            
-            for (let i = 0; i < 4; i++) {
-                const unitId = units ? units[i] : 0;
-                const rawValue = unconvertValue(values[i], unitId);
-                buffer.writeInt32LE(rawValue, 2 + i * 4); // Gleiche Reihenfolge wie Parsen
-                buffer.writeUInt8(unitId, 18 + i);
-            }
-            
         } else {
-            // CoE V1: Analog mit Int16 (2 Bytes pro Wert)
-            buffer = Buffer.alloc(COE_V1_PACKET_SIZE);
+            // Analog V1
+            buffer = Buffer.alloc(14);
             buffer.writeUInt8(nodeNumber, 0);
             buffer.writeUInt8(blockNumber, 1);
             
             for (let i = 0; i < 4; i++) {
                 const unitId = units ? units[i] : 0;
-                const rawValue = unconvertValue(values[i], unitId);
+                const rawValue = unconvertValue(values[i], unitId, 1); // V1 Dezimalstellen
                 
-                // Prüfe V1 Limits
                 if (rawValue > 32767 || rawValue < -32768) {
-                    console.warn(`Value ${values[i]} exceeds V1 limits for unit ${unitId}. Consider using V2.`);
+                    console.warn(`Value ${values[i]} exceeds V1 limits. Consider using V2.`);
                 }
                 
-                // LE statt BE verwenden (konsistent mit Parsen)
                 buffer.writeInt16LE(Math.max(-32768, Math.min(32767, rawValue)), 2 + i * 2);
                 buffer.writeUInt8(unitId, 10 + i);
             }
@@ -833,35 +820,222 @@ module.exports = function(RED) {
         
         return buffer;
     }
-    
-    // Block und Position für CAN-Netzwerkausgang berechnen
-    function getBlockInfo(dataType, outputNumber) {
+
+    // ============================================
+    // CoE V2 Protokoll-Unterstützung
+    // ============================================
+
+    // CoE V2 Parsing-Funktion
+    function parseCoEV2Packet(buffer) {
+        if (buffer.length < 4) {
+            return null;
+        }
+        
+        // Header parsen
+        const versionLow = buffer.readUInt8(0);
+        const versionHigh = buffer.readUInt8(1);
+        const messageLength = buffer.readUInt8(2);
+        const blockCount = buffer.readUInt8(3);
+        
+        // Version prüfen
+        if (versionLow !== 0x02 || versionHigh !== 0x00) {
+            return null;
+        }
+        
+        // Prüfen ob genug Daten vorhanden
+        const expectedLength = 4 + (blockCount * 8);
+        if (buffer.length < expectedLength) {
+            console.warn(`V2: Unvollständiges Paket. Erwartet: ${expectedLength}, Erhalten: ${buffer.length}`);
+            return null;
+        }
+        
+        // Wert-Blöcke parsen
+        const blocks = [];
+        for (let i = 0; i < blockCount; i++) {
+            const offset = 4 + (i * 8);
+            
+            const canNode = buffer.readUInt8(offset);
+            const outputLow = buffer.readUInt8(offset + 1);
+            const outputHigh = buffer.readUInt8(offset + 2);
+            const outputNumber = outputLow | (outputHigh << 8);
+            const unitId = buffer.readUInt8(offset + 3);
+            const value = buffer.readInt32LE(offset + 4);
+            
+            blocks.push({
+                canNode: canNode,
+                outputNumber: outputNumber,
+                unitId: unitId,
+                value: value,
+                isDigital: outputNumber <= 254,
+                isAnalog: outputNumber > 254
+            });
+        }
+        
+        return {
+            version: 2,
+            messageLength: messageLength,
+            blockCount: blockCount,
+            blocks: blocks
+        };
+    }
+
+    // CoE V2 Paket erstellen
+    function createCoEV2Packet(canNode, outputs) {
+        // outputs: Array von {outputNumber, unitId, value}
+        // Max 16 Wert-Blöcke
+        const blockCount = Math.min(outputs.length, 16);
+        const messageLength = 4 + (blockCount * 8);
+        
+        const buffer = Buffer.alloc(messageLength);
+        
+        // Header schreiben
+        buffer.writeUInt8(0x02, 0);  // Version Low
+        buffer.writeUInt8(0x00, 1);  // Version High
+        buffer.writeUInt8(messageLength, 2);  // Message Length
+        buffer.writeUInt8(blockCount, 3);  // Block Count
+        
+        // Wert-Blöcke schreiben
+        for (let i = 0; i < blockCount; i++) {
+            const offset = 4 + (i * 8);
+            const output = outputs[i];
+            
+            buffer.writeUInt8(canNode, offset);  // CAN Node
+            
+            // Output Number (Little Endian, 2 Bytes)
+            buffer.writeUInt8(output.outputNumber & 0xFF, offset + 1);
+            buffer.writeUInt8((output.outputNumber >> 8) & 0xFF, offset + 2);
+            
+            buffer.writeUInt8(output.unitId || 0, offset + 3);  // Unit ID
+            buffer.writeInt32LE(output.value, offset + 4);  // Value (Int32 LE)
+        }
+        
+        return buffer;
+    }
+
+    // V2 Daten in das alte Format konvertieren (für Kompatibilität)
+    function convertV2ToLegacyFormat(v2Data) {
+        // Gruppiere Outputs nach Block
+        const blockMap = {};
+        
+        v2Data.blocks.forEach(block => {
+            const isDigital = block.outputNumber <= 254;
+            const actualOutput = isDigital ? block.outputNumber : (block.outputNumber - 255);
+            
+            // Bestimme Block-Nummer und Position
+            let blockNumber, position;
+            
+            if (isDigital) {
+                // Digital: Output 1-16 → Block 0, Output 17-32 → Block 9
+                if (actualOutput <= 16) {
+                    blockNumber = 0;
+                    position = actualOutput - 1;
+                } else {
+                    blockNumber = 9;
+                    position = actualOutput - 17;
+                }
+            } else {
+                // Analog: Output 1-4 → Block 1, 5-8 → Block 2, etc.
+                blockNumber = Math.floor((actualOutput - 1) / 4) + 1;
+                position = (actualOutput - 1) % 4;
+            }
+            
+            const key = `${block.canNode}-${blockNumber}`;
+            
+            if (!blockMap[key]) {
+                blockMap[key] = {
+                    nodeNumber: block.canNode,
+                    blockNumber: blockNumber,
+                    dataType: isDigital ? 'digital' : 'analog',
+                    values: isDigital ? new Array(16).fill(0) : new Array(4).fill(0),
+                    units: isDigital ? null : new Array(4).fill(0)
+                };
+            }
+            
+            // Wert konvertieren und einfügen (V2 verwendet andere Dezimalstellen)
+            const convertedValue = convertValue(block.value, block.unitId, 2);
+            blockMap[key].values[position] = isDigital ? (block.value ? 1 : 0) : convertedValue;
+            
+            if (!isDigital && blockMap[key].units) {
+                blockMap[key].units[position] = block.unitId;
+            }
+        });
+        
+        return Object.values(blockMap);
+    }
+
+    // Konvertiere Legacy-Format zu V2 Outputs
+    function convertLegacyToV2Format(nodeNumber, blockNumber, values, units, dataType) {
+        const outputs = [];
+        
         if (dataType === 'digital') {
-            if (outputNumber >= 1 && outputNumber <= 16) {
-                return { block: 0, position: outputNumber - 1 };
-            } else if (outputNumber >= 17 && outputNumber <= 32) {
-                return { block: 9, position: outputNumber - 17 };
+            // Digital: 16 Bits
+            const baseOutput = blockNumber === 0 ? 1 : 17;
+            for (let i = 0; i < values.length; i++) {
+                if (values[i] !== undefined) {
+                    outputs.push({
+                        outputNumber: baseOutput + i,
+                        unitId: 0,
+                        value: values[i] ? 1 : 0
+                    });
+                }
             }
         } else {
-            // Analog: Block 1-8, je 4 Outputs
-            const block = Math.floor((outputNumber - 1) / 4) + 1;
-            const position = (outputNumber - 1) % 4;
-            return { block: block, position: position };
+            // Analog: 4 Werte
+            const baseOutput = (blockNumber - 1) * 4 + 1;
+            for (let i = 0; i < 4; i++) {
+                if (values[i] !== undefined) {
+                    const unitId = units ? units[i] : 0;
+                    const rawValue = unconvertValue(values[i], unitId, 2); // V2 verwendet andere Dezimalstellen
+                    
+                    // Output > 255 bedeutet analog
+                    const outputNumber = baseOutput + i + 255;
+                    
+                    outputs.push({
+                        outputNumber: outputNumber,
+                        unitId: unitId,
+                        value: rawValue
+                    });
+                }
+            }
         }
-        return { block: 0, position: 0 };
+        
+        return outputs;
     }
-    
-    // Wert basierend auf Unit ID konvertieren (Raw → Float)
-    function convertValue(rawValue, unitId) {
-        const unitInfo = getUnitInfo(unitId);
+
+    // Hilfsfunktionen für Wert-Konvertierung
+    function convertValue(rawValue, unitId, protocolVersion) {
+        const unitInfo = getUnitInfo(unitId, protocolVersion);
         const decimals = unitInfo.decimals;
         return rawValue / Math.pow(10, decimals);
     }
-    
-    // Wert für Übertragung vorbereiten (Float → Raw)
-    function unconvertValue(value, unitId) {
-        const unitInfo = getUnitInfo(unitId);
+
+    function unconvertValue(value, unitId, protocolVersion) {
+        const unitInfo = getUnitInfo(unitId, protocolVersion);
         const decimals = unitInfo.decimals;
         return Math.round(value * Math.pow(10, decimals));
+    }
+
+    function getUnitInfo(unitId, protocolVersion) {
+        // Verwende globales UNITS Object oder Fallback
+        let unitInfo;
+        if (typeof UNITS !== 'undefined' && UNITS[unitId]) {
+            unitInfo = { ...UNITS[unitId] };
+        } else {
+            unitInfo = { name: `Unknown (${unitId})`, symbol: '', decimals: 0 };
+        }
+        
+        // V2-spezifische Anpassungen für Units mit abweichenden Dezimalstellen
+        if (protocolVersion === 2) {
+            const v2Overrides = {
+                10: { decimals: 2 }  // Leistung kW: V1=1, V2=2 Dezimalstellen
+                // Weitere Units mit V2-Abweichungen hier hinzufügen
+            };
+            
+            if (v2Overrides[unitId]) {
+                unitInfo = { ...unitInfo, ...v2Overrides[unitId] };
+            }
+        }
+        
+        return unitInfo;
     }
 };
