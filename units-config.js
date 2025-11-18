@@ -46,6 +46,7 @@ const UNITS = {
     40: { name: 'Geschwindigkeit', symbol: 'mm/min', decimals: 0 },
     41: { name: 'Geschwindigkeit', symbol: 'mm/h', decimals: 0 },
     42: { name: 'Geschwindigkeit', symbol: 'mm/d', decimals: 0 },
+    43: { name: 'Digitalwert', symbol: 'on/off', decimals: 0 },
     50: { name: 'Euro', symbol: '€', decimals: 2 },
     51: { name: 'Dollar', symbol: '$', decimals: 2 },
     52: { name: 'AbsoluteFeuchte', symbol: 'g/m³', decimals: 1 },

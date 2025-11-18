@@ -319,6 +319,7 @@ module.exports = function(RED) {
 
     // Cache für Block-Zustände und Sending-Queues
     const blockStateCache = {};
+    const blockUnitsCache = {}; // NEW: Cache für Units pro Block
     const blockQueues = {};
     const blockTimers = {};
 
@@ -333,7 +334,8 @@ module.exports = function(RED) {
                 blockStateCache[key] = new Array(16).fill(0);
             }
         }
-        return blockStateCache[key];
+        // RETURN A COPY to avoid accidental external mutation
+        return Array.isArray(blockStateCache[key]) ? [...blockStateCache[key]] : blockStateCache[key];
     }
 
     function setBlockState(nodeNumber, blockNumber, dataType, values) {
@@ -341,20 +343,46 @@ module.exports = function(RED) {
         blockStateCache[key] = [...values];
     }
 
+    function getBlockUnits(nodeNumber, blockNumber, dataType) {
+        const key = `${nodeNumber}-${blockNumber}-${dataType}`;
+        if (!blockUnitsCache[key]) {
+            // Only analog blocks have units
+            if (dataType === 'analog') {
+                blockUnitsCache[key] = [0, 0, 0, 0];
+            } else {
+                blockUnitsCache[key] = null;
+            }
+        }
+        return blockUnitsCache[key] ? [...blockUnitsCache[key]] : null;
+    }
+
+    function setBlockUnits(nodeNumber, blockNumber, dataType, units) {
+        const key = `${nodeNumber}-${blockNumber}-${dataType}`;
+        if (dataType === 'analog') {
+            blockUnitsCache[key] = units ? [...units] : [0,0,0,0];
+        } else {
+            blockUnitsCache[key] = null;
+        }
+    }
+
     function getQueueKey(nodeNumber, blockNumber, dataType) {
         return `${nodeNumber}-${blockNumber}-${dataType}`;
     }
 
-    function queueAndSend(node, nodeNumber, blockNumber, values, units, dataType, version, cmiConfig, cmiAddress) {
+    function queueAndSend(node, nodeNumber, blockNumber, values, units, dataType, version, cmiConfig, cmiAddress, origMsg) {
         const queueKey = getQueueKey(nodeNumber, blockNumber, dataType);
         
-        // Merge mit aktuellen Block-Werten
+        // Merge mit aktuellem Block-Zustand (kopieren, nicht referenzieren)
         let mergedValues = getBlockState(nodeNumber, blockNumber, dataType);
-        
+        let mergedUnits = (dataType === 'analog') ? getBlockUnits(nodeNumber, blockNumber, dataType) : null;
+
         if (dataType === 'analog') {
             for (let i = 0; i < 4; i++) {
                 if (values[i] !== undefined) {
                     mergedValues[i] = values[i];
+                }
+                if (units && units[i] !== undefined) {
+                    mergedUnits[i] = units[i];
                 }
             }
         } else {
@@ -365,22 +393,33 @@ module.exports = function(RED) {
             }
         }
         
-        // Speichere in Queue
+        // Speichere in Queue (clone arrays to avoid shared refs)
         if (!blockQueues[queueKey]) {
             blockQueues[queueKey] = {
-                values: mergedValues,
-                units: units,
+                values: [...mergedValues],
+                units: mergedUnits ? [...mergedUnits] : null,
                 node: node,
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                origMsg: origMsg || null
             };
         } else {
-            // Merge mit bestehenden Queue-Einträgen
-            blockQueues[queueKey].values = mergedValues;
-            if (units) {
-                blockQueues[queueKey].units = units;
+            // Merge mit bestehenden Queue-Einträgen per-Index (keine komplette Überschreibung)
+            const q = blockQueues[queueKey];
+            for (let i = 0; i < mergedValues.length; i++) {
+                q.values[i] = mergedValues[i];
             }
+            if (mergedUnits) {
+                if (!q.units) q.units = [...mergedUnits];
+                else {
+                    for (let i = 0; i < mergedUnits.length; i++) {
+                        if (mergedUnits[i] !== undefined) q.units[i] = mergedUnits[i];
+                    }
+                }
+            }
+            // replace origMsg with the most recent (keeps payload for debug/forward)
+            q.origMsg = origMsg || q.origMsg;
         }
-        
+         
         // Lösche alten Timer
         if (blockTimers[queueKey]) {
             clearTimeout(blockTimers[queueKey]);
@@ -399,24 +438,49 @@ module.exports = function(RED) {
                     version
                 );
                 
+                // Persist both values and units for the block
                 setBlockState(nodeNumber, blockNumber, dataType, queued.values);
-                cmiConfig.send(cmiAddress, packet);
+                if (dataType === 'analog') {
+                    setBlockUnits(nodeNumber, blockNumber, dataType, queued.units);
+                }
                 
-                queued.node.status({
-                    fill: "green",
-                    shape: "dot",
-                    text: `sent (merged) [${version}]`
-                });
+                // send debug output on the node outputs: [original msg, debug info]
+                try {
+                    const debugPayload = {
+                        debug: {
+                            hex: packet.toString('hex').toUpperCase(),
+                            node: nodeNumber,
+                            block: blockNumber,
+                            dataType: dataType,
+                            version: version,
+                            blockState: queued.values,
+                            units: queued.units
+                        }
+                    };
+                    // if node has outputs, send original msg on first output and debug on second
+                    queued.node.send([queued.origMsg || null, { payload: debugPayload }]);
+                } catch (err) {
+                    // do not break sending on debug failure
+                    queued.node.warn(`Failed to send debug msg: ${err.message}`);
+                }
                 
-                setTimeout(() => {
-                    queued.node.status({fill: "grey", shape: "ring", text: `ready [${version}]`});
-                }, 2000);
-                
-                delete blockQueues[queueKey];
-                delete blockTimers[queueKey];
-            }
-        }, DEBOUNCE_DELAY);
-    }
+                 cmiConfig.send(cmiAddress, packet);
+                 
+                 queued.node.status({
+                     fill: "green",
+                     shape: "dot",
+                     text: `sent (merged) [${version}]`
+                 });
+                 
+                 setTimeout(() => {
+                     queued.node.status({fill: "grey", shape: "ring", text: `ready [${version}]`});
+                 }, 2000);
+                 
+                 delete blockQueues[queueKey];
+                 delete blockTimers[queueKey];
+             }
+         }, DEBOUNCE_DELAY);
+     }
 
     // ============================================
     // CoE Output Node (Senden von Werten)
@@ -482,145 +546,158 @@ module.exports = function(RED) {
         node.cmiConfig = RED.nodes.getNode(config.cmiconfig);
         node.cmiAddress = node.cmiConfig.address;
         node.nodeNumber = parseInt(config.nodeNumber) || 1;
+        // config.blockNumber is 1..8 (editor-side). Map to actual CoE block & bit offset below.
         node.blockNumber = parseInt(config.blockNumber) || 1;
         node.dataType = config.dataType || 'analog';
-        node.sendMode = config.sendMode || 'change'; // 'change' oder 'immediate'
+        node.sendMode = config.sendMode || 'change';
         
         if (!node.cmiConfig) {
             node.error("CoE Configuration missing");
             return;
         }
 
+        // VALIDIERUNG: config.blockNumber 1..8 für beide Datentypen
+        if (node.blockNumber < 1 || node.blockNumber > 8) {
+            node.error(`Block muss 1-8 sein, nicht ${node.blockNumber}`);
+            node.status({fill: "red", shape: "ring", text: "Invalid block number"});
+            return;
+        }
+
         const version = node.cmiConfig.coeVersion;
         
-        // Puffer für die 4 Eingangswerte (oder 16 für digital)
+        // ALWAYS 4 input channels (group of 4 values/bits)
         let inputBuffer = {
-            values: node.dataType === 'analog' ? [0, 0, 0, 0] : new Array(16).fill(0),
-            units: node.dataType === 'analog' ? [0, 0, 0, 0] : null,
-            lastUpdate: [0, 0, 0, 0] // Timestamp für Änderungserkennung
+            values: [0, 0, 0, 0],
+            units: [0, 0, 0, 0],
+            lastUpdate: [0, 0, 0, 0]
         };
         
         let sendTimer = null;
 
-        function sendBlock() {
-            // Hole aktuellen Block-Zustand (merge mit externen Änderungen)
-            let values = getBlockState(node.nodeNumber, node.blockNumber, node.dataType);
-            
-            // Merge mit Input-Buffer
-            if (node.dataType === 'analog') {
-                for (let i = 0; i < 4; i++) {
-                    values[i] = inputBuffer.values[i];
-                }
+        // Helper: map config block (1..8) + dataType -> actual CoE block and bit offset
+        function mapConfigBlockToCoE(configBlock, dataType) {
+            if (dataType === 'analog') {
+                // analog: configBlock directly maps to CoE block 1..8, offset 0
+                return { coeBlock: configBlock, offset: 0 };
             } else {
-                for (let i = 0; i < 16; i++) {
-                    values[i] = inputBuffer.values[i];
+                // digital: groups 1..4 -> CoE block 0, groups 5..8 -> CoE block 9
+                const groupIndex = configBlock - 1; // 0..7
+                const coeBlock = (groupIndex < 4) ? 0 : 9;
+                const groupWithinBlock = groupIndex % 4; // 0..3
+                const offset = groupWithinBlock * 4; // 0,4,8,12
+                return { coeBlock: coeBlock, offset: offset };
+            }
+        }
+
+        function sendBlock() {
+            const mapping = mapConfigBlockToCoE(node.blockNumber, node.dataType);
+            // read current block state (copy)
+            let values;
+            if (node.dataType === 'analog') {
+                values = getBlockState(node.nodeNumber, mapping.coeBlock, 'analog'); // 4 items
+                // override with buffer
+                for (let i = 0; i < 4; i++) values[i] = inputBuffer.values[i];
+            } else {
+                // digital: get 16-bit block array and merge 4 bits at offset
+                values = getBlockState(node.nodeNumber, mapping.coeBlock, 'digital'); // 16 items
+                for (let i = 0; i < 4; i++) {
+                    values[mapping.offset + i] = inputBuffer.values[i] ? 1 : 0;
                 }
             }
             
-            // Paket erstellen und senden
+            // units only for analog (4 values)
+            const units = (node.dataType === 'analog') ? [...inputBuffer.units] : null;
+            
             const packet = createCoEPacket(
                 node.nodeNumber,
-                node.blockNumber,
+                mapping.coeBlock,
                 values,
-                inputBuffer.units,
-                node.dataType,
+                units,
+                node.dataType === 'analog' ? 'analog' : 'digital',
                 version
             );
             
-            setBlockState(node.nodeNumber, node.blockNumber, node.dataType, values);
+            // persist merged state
+            if (node.dataType === 'analog') {
+                setBlockState(node.nodeNumber, mapping.coeBlock, 'analog', values);
+                setBlockUnits(node.nodeNumber, mapping.coeBlock, 'analog', units);
+            } else {
+                setBlockState(node.nodeNumber, mapping.coeBlock, 'digital', values);
+            }
+            
+            // Debug-Ausgabe an 2. Ausgang senden
+            try {
+                const debugPayload = {
+                    debug: {
+                        hex: packet.toString('hex').toUpperCase(),
+                        node: node.nodeNumber,
+                        block: mapping.coeBlock,
+                        configBlock: node.blockNumber,
+                        dataType: node.dataType,
+                        version: version,
+                        blockState: values,
+                        units: units
+                    }
+                };
+                node.send([null, { payload: debugPayload }]);
+            } catch (err) {
+                node.warn(`Failed to send block debug msg: ${err.message}`);
+            }
+            
             node.cmiConfig.send(node.cmiAddress, packet);
             
             node.status({
                 fill: "green",
                 shape: "dot",
-                text: `sent block ${node.blockNumber} [${node.dataType}]`
+                text: `sent cfgB${node.blockNumber} → B${mapping.coeBlock}`
             });
             
             setTimeout(() => {
-                node.status({fill: "grey", shape: "ring", text: `ready`});
+                node.status({fill: "grey", shape: "ring", text: "ready (buffered)"});
             }, 2000);
         }
 
-        // Eingänge definieren
-        if (node.dataType === 'analog') {
-            // 4 Analogue Eingänge
-            for (let i = 1; i <= 4; i++) {
-                node.on(`input${i}`, function(msg) {
-                    const index = i - 1;
+        // Register 4 fixed inputs (always)
+        for (let i = 1; i <= 4; i++) {
+            node.on(`input${i}`, function(msg) {
+                const index = i - 1;
+                
+                if (node.dataType === 'analog') {
                     const newValue = parseFloat(msg.payload);
-                    
                     if (isNaN(newValue)) {
                         node.error(`Input ${i}: Invalid number: ${msg.payload}`);
                         return;
                     }
-                    
-                    // Wert im Buffer speichern
                     inputBuffer.values[index] = newValue;
-                    
-                    // Unit aktualisieren (falls vorhanden)
                     if (msg.coe && msg.coe.unit !== undefined) {
                         inputBuffer.units[index] = parseInt(msg.coe.unit);
                     }
-                    
-                    inputBuffer.lastUpdate[index] = Date.now();
-                    
-                    // Status: Zeige alle 4 Werte
-                    const displayValues = inputBuffer.values.map(v => v.toFixed(1)).join(' | ');
-                    node.status({
-                        fill: "yellow",
-                        shape: "dot",
-                        text: `[${displayValues}]`
-                    });
-                    
-                    // Sende je nach Mode
-                    if (node.sendMode === 'immediate') {
-                        sendBlock();
-                    } else if (node.sendMode === 'change') {
-                        // Debounce: sende nach 100ms wenn keine neuen Änderungen kommen
-                        if (sendTimer) {
-                            clearTimeout(sendTimer);
-                        }
-                        sendTimer = setTimeout(sendBlock, 100);
-                    }
-                });
-            }
-        } else {
-            // 16 Digitale Eingänge (oder gruppiert in 4er)
-            for (let i = 1; i <= 16; i++) {
-                node.on(`input${i}`, function(msg) {
-                    const index = i - 1;
+                } else {
+                    // digital group: expect boolean/0/1
                     inputBuffer.values[index] = msg.payload ? 1 : 0;
-                    inputBuffer.lastUpdate[index] = Date.now();
-                    
-                    // Status: Zeige alle 16 Bits (4er Gruppen)
-                    let displayBits = '';
-                    for (let j = 0; j < 16; j++) {
-                        displayBits += inputBuffer.values[j] ? '1' : '0';
-                        if ((j + 1) % 4 === 0) displayBits += ' ';
-                    }
-                    node.status({
-                        fill: "yellow",
-                        shape: "dot",
-                        text: displayBits
-                    });
-                    
-                    if (node.sendMode === 'immediate') {
-                        sendBlock();
-                    } else if (node.sendMode === 'change') {
-                        if (sendTimer) {
-                            clearTimeout(sendTimer);
-                        }
-                        sendTimer = setTimeout(sendBlock, 100);
-                    }
-                });
-            }
+                }
+                
+                inputBuffer.lastUpdate[index] = Date.now();
+                
+                // status display: show 4 values or 4 bits
+                if (node.dataType === 'analog') {
+                    const displayValues = inputBuffer.values.map(v => Number.isFinite(v) ? v.toFixed(1) : 'NaN').join(' | ');
+                    node.status({ fill: "yellow", shape: "dot", text: `[${displayValues}]` });
+                } else {
+                    node.status({ fill: "yellow", shape: "dot", text: inputBuffer.values.map(v => v ? '1' : '0').join(' ') });
+                }
+
+                if (node.sendMode === 'immediate') {
+                    sendBlock();
+                } else if (node.sendMode === 'change') {
+                    if (sendTimer) clearTimeout(sendTimer);
+                    sendTimer = setTimeout(sendBlock, 100);
+                }
+            });
         }
 
-        // Cleanup
         node.on('close', function() {
-            if (sendTimer) {
-                clearTimeout(sendTimer);
-            }
+            if (sendTimer) clearTimeout(sendTimer);
         });
         
         node.status({fill: "grey", shape: "ring", text: "ready (buffered)"});

@@ -1,4 +1,4 @@
-<!-- ta-cmi-coe.html - Node-RED UI Templates für TA CMI CoE Nodes -->
+<!-- ta-cmi-coe.html - Node-RED UI templates for TA CMI CoE Nodes -->
 
 <!-- CMI Configuration Node -->
 <script type="text/html" data-template-name="cmi-config">
@@ -434,6 +434,7 @@ default: → Other Nodes Handler</pre>
     <div class="form-row">
         <label for="node-input-blockNumber"><i class="fa fa-th"></i> <span data-i18n="ta-cmi-coe.coe-block-output.label.blockNumber"></span></label>
         <input type="number" id="node-input-blockNumber" placeholder="1" min="0" max="9">
+        <div id="block-help" style="margin-left: 110px; margin-top: 5px; font-size: 0.9em; color: #666;"></div>
     </div>
 </script>
 
@@ -449,8 +450,8 @@ default: → Other Nodes Handler</pre>
             dataType: {value: 'analog'},
             sendMode: {value: 'change'}
         },
-        inputs: 0,  // Dynamisch!
-        outputs: 0,
+        inputs: 4, // fixed 4 inputs (Block Output always 4-channel group)
+        outputs: 2,
         inputLabels: function(i) {
             if (this.dataType === 'analog') {
                 return 'Out ' + (i + 1);
@@ -463,8 +464,45 @@ default: → Other Nodes Handler</pre>
             return this.name || `Block ${this.blockNumber} Out`;
         },
         oneditprepare: function() {
-            const nodeCount = this.dataType === 'analog' ? 4 : 16;
-            this.inputs = nodeCount;  // Setze Input-Anzahl
+            const node = this;
+            
+            function updateBlockNumberValidation() {
+                const dataType = $("#node-input-dataType").val();
+                const blockInput = $("#node-input-blockNumber");
+                const helpText = $("#block-help");
+                
+                // Both types use block selection 1-8 in the editor:
+                // - Analog: selects CoE analog block 1..8 (4 outputs each)
+                // - Digital: selects 4-bit group 1..8 where groups 1..4 => CoE block 0,
+                //   groups 5..8 => CoE block 9 (group maps to 4 bits inside the digital block)
+                blockInput.attr('min', '1');
+                blockInput.attr('max', '8');
+                if (dataType === 'analog') {
+                    helpText.text('Analog: Block 1-8 (je 4 Ausgänge)');
+                } else {
+                    helpText.text('Digital: Gruppe 1-8 (1-4 → CoE Block 0, 5-8 → CoE Block 9, je 4 Bits)');
+                }
+            }
+            
+            // Update on data type change
+            $("#node-input-dataType").on('change', function() {
+                updateBlockNumberValidation();
+                // Trigger UI refresh
+                RED.events.emit("editor:updateNodeProperties");
+            });
+            
+            // Initial setup
+            updateBlockNumberValidation();
+        },
+        
+        // Custom validation
+        validate: function() {
+            const dataType = this.dataType;
+            const blockNumber = parseInt(this.blockNumber);
+            if (isNaN(blockNumber) || blockNumber < 1 || blockNumber > 8) {
+                return [{blockNumber: "Block muss 1-8 sein"}];
+            }
+            return true;
         }
     });
 </script>
