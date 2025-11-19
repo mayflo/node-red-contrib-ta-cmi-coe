@@ -1,0 +1,14 @@
+{
+    "config": {
+        "label": {
+            "name": "Name",
+            "address": "CMI Address",
+            "coeVersion": "CoE Version"
+        },
+        "help": {
+            "v1": "Standard setting. Range: ±32.767",
+            "v2": "Extended, requires CMI FW ≥v1.43.1. Range: ±2.147.483.647",
+            "settings": "See Settings > CAN in CMI menu"
+        }
+    }
+}

@@ -1,0 +1,65 @@
+<!-- CoE Monitor Node -->
+<script type="text/javascript">
+    RED.nodes.registerType('coe-monitor', {
+        category: 'TA CMI',
+        color: '#FFCC66',
+        defaults: {
+            name: { value: "" },
+            cmiconfig: { value: "", type: "cmi-config", required: true },
+            filterNodeNumber: { value: 0, validate: RED.validators.number() },
+            filterDataType: { value: "all" },
+            includeRaw: { value: false }
+        },
+        inputs: 0,
+        outputs: 1,
+        icon: "feed.svg",
+        label: function() {
+            if (this.filterNodeNumber && this.filterNodeNumber > 0) {
+                return this.name || `CoE Monitor (Node ${this.filterNodeNumber})`;
+            }
+            return this.name || "CoE Monitor (All)";
+        },
+        labelStyle: function() {
+            return this.name ? "node_label_italic" : "";
+        }
+    });
+</script>
+
+<script type="text/html" data-template-name="coe-monitor">
+    <div class="form-row">
+        <label for="node-input-name"><i class="fa fa-tag"></i> <span data-i18n="coe-monitor.label.name"></span></label>
+        <input type="text" id="node-input-name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-cmiconfig"><i class="fa fa-cog"></i> <span data-i18n="coe-monitor.label.cmiconfig"></span></label>
+        <input type="text" id="node-input-cmiconfig">
+    </div>
+    <div class="form-row">
+        <label for="node-input-filterNodeNumber"><i class="fa fa-filter"></i> <span data-i18n="coe-monitor.label.filterNodeNumber"></span></label>
+        <input type="number" id="node-input-filterNodeNumber" placeholder="0" min="0" max="62">
+        <span id="monitor-filter-help" style="margin-left: 110px; font-size: 0.9em; color: #666;"></span>
+    </div>
+    <div class="form-row">
+        <label for="node-input-filterDataType"><i class="fa fa-filter"></i> <span data-i18n="coe-monitor.label.filterDataType"></span></label>
+        <select id="node-input-filterDataType">
+            <option value="">- <span data-i18n="common.all"></span> -</option>
+            <option value="analog"><span data-i18n="common.analog"></span></option>
+            <option value="digital"><span data-i18n="common.digital"></span></option>
+        </select>
+    </div>
+    <div class="form-row">
+        <label for="node-input-includeRaw"><i class="fa fa-database"></i> <span data-i18n="coe-monitor.label.includeRaw"></span></label>
+        <input type="checkbox" id="node-input-includeRaw" style="display: inline-block; width: auto;">
+    </div>
+</script>
+
+<script type="text/html" data-help-name="coe-monitor">
+    <p><span data-i18n="coe-monitor.help.description"></span></p>
+    <p><span data-i18n="coe-monitor.help.ideal"></span></p>
+    <h3><span data-i18n="common.configuration"></span></h3>
+    <ul>
+        <li><span data-i18n="coe-monitor.help.filterNode"></span></li>
+        <li><span data-i18n="coe-monitor.help.filterType"></span></li>
+        <li><span data-i18n="coe-monitor.help.includeRaw"></span></li>
+    </ul>
+</script>

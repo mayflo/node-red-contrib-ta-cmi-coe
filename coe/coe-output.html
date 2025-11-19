@@ -1,0 +1,102 @@
+<!-- CoE Output Node -->
+<script type="text/javascript">
+    RED.nodes.registerType('coe-output', {
+        category: 'TA CMI',
+        color: '#C0DEED',
+        defaults: {
+            name: { value: "" },
+            cmiconfig: { value: "", type: "cmi-config", required: true },
+            nodeNumber: { value: 1, validate: RED.validators.number() },
+            outputNumber: { value: 1, validate: RED.validators.number() },
+            dataType: { value: "analog" },
+            unit: { value: 0, validate: RED.validators.number() }
+        },
+        inputs: 1,
+        outputs: 2,
+        icon: "arrow-out.svg",
+        label: function() {
+            const type = this.dataType === 'analog' ? 'A' : 'D';
+            return this.name || `CoE Out (${type}${this.outputNumber})`;
+        },
+        labelStyle: function() {
+            return this.name ? "node_label_italic" : "";
+        },
+        oneditprepare: function() {
+            const node = this;
+            $.getJSON('ta-cmi-coe/units', function(units) {
+                const unitSelect = $('#node-input-unit');
+                unitSelect.empty();
+                const sortedUnits = Object.entries(units).sort((a, b) => 
+                    parseInt(a[0]) - parseInt(b[0])
+                );
+                sortedUnits.forEach(([id, unit]) => {
+                    const label = unit.symbol ? 
+                        `${unit.symbol} (${unit.name})` : 
+                        unit.name;
+                    unitSelect.append($('<option>', {
+                        value: id,
+                        text: label
+                    }));
+                });
+                unitSelect.val(node.unit);
+            }).fail(function() {
+                const unitSelect = $('#node-input-unit');
+                unitSelect.append($('<option>', { value: 0, text: 'Dimensionslos' }));
+            });
+            
+            $("#node-input-dataType").change(function() {
+                if ($(this).val() === "analog") {
+                    $("#unit-row").show();
+                } else {
+                    $("#unit-row").hide();
+                }
+            });
+            $("#node-input-dataType").change();
+        }
+    });
+</script>
+
+<script type="text/html" data-template-name="coe-output">
+    <div class="form-row">
+        <label for="node-input-name"><i class="fa fa-tag"></i> <span data-i18n="coe-output.label.name"></span></label>
+        <input type="text" id="node-input-name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-cmiconfig"><i class="fa fa-cog"></i> <span data-i18n="coe-output.label.cmiconfig"></span></label>
+        <input type="text" id="node-input-cmiconfig">
+    </div>
+    <div class="form-row">
+        <label for="node-input-nodeNumber"><i class="fa fa-sitemap"></i> <span data-i18n="coe-output.label.nodeNumber"></span></label>
+        <input type="number" id="node-input-nodeNumber" placeholder="1" min="1" max="62">
+    </div>
+    <div class="form-row">
+        <label for="node-input-outputNumber"><i class="fa fa-arrow-up"></i> <span data-i18n="coe-output.label.outputNumber"></span></label>
+        <input type="number" id="node-input-outputNumber" placeholder="1" min="1" max="32">
+    </div>
+    <div class="form-row">
+        <label for="node-input-dataType"><i class="fa fa-list"></i> <span data-i18n="coe-output.label.dataType"></span></label>
+        <select id="node-input-dataType">
+            <option value="analog"><span data-i18n="common.analog"></span></option>
+            <option value="digital"><span data-i18n="common.digital"></span></option>
+        </select>
+    </div>
+    <div class="form-row" id="unit-row" style="display:none;">
+        <label for="node-input-unit"><i class="fa fa-ruler"></i> <span data-i18n="coe-output.label.unit"></span></label>
+        <select id="node-input-unit"></select>
+    </div>
+</script>
+
+<script type="text/html" data-help-name="coe-output">
+    <p><span data-i18n="coe-output.help.description"></span></p>
+    <h3><span data-i18n="common.configuration"></span></h3>
+    <ul>
+        <li><b><span data-i18n="coe-output.label.nodeNumber"></span>:</b> <span data-i18n="coe-output.help.nodeNumber"></span></li>
+        <li><b><span data-i18n="coe-output.label.outputNumber"></span>:</b> <span data-i18n="coe-output.help.outputNumber"></span></li>
+        <li><b><span data-i18n="coe-output.label.dataType"></span>:</b> <span data-i18n="coe-output.help.dataType"></span></li>
+        <li><b><span data-i18n="coe-output.label.unit"></span>:</b> <span data-i18n="coe-output.help.unit"></span></li>
+    </ul>
+    <h3><span data-i18n="common.outputs"></span></h3>
+    <p><span data-i18n="coe-output.help.outputs"></span></p>
+    <h3><span data-i18n="common.notes"></span></h3>
+    <p><span data-i18n="coe-output.help.debouncing"></span></p>
+</script>
