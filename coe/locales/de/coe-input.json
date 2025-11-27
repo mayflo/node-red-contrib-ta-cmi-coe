@@ -5,10 +5,15 @@
             "cmiconfig": "CMI Konfig",
             "nodeNumber": "Knoten",
             "outputNumber": "Eingang",
-            "dataType": "Datentyp"
+            "dataType": "Datentyp",
+            "timeout": "Timeout (Min)"
         },
         "placeholder": {
             "nodeNumber": "1-62, 0 = beliebig"
+        },
+        "status": {
+            "waiting": "wartet",
+            "waitingAny": "wartet (alle Knoten)"
         }
     }
 }

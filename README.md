@@ -1,16 +1,14 @@
-**Status**: In Entwicklung
+**Status**: Erst-Release 27.11.2025
 
 # node-red-contrib-ta-cmi-coe
 
 Node-RED Bibliothek zum Lesen und Schreiben von Werten an Technische Alternative CMI über CAN over Ethernet (CoE).
 
-Eine offizielle Schnittstellen-Dokumentation durch TA fehlt. Die Umsetzung von CoE V1 basiert auf dem Protokoll-Verständnis von [SymconJoTTACoE](https://github.com/jotata/SymconJoTTACoE/).
-
 ## Funktionsumfang
 
+- Unterstützung für CoE-Version 1 + 2
 - **CoE Input Node**: Empfang von analogen und digitalen Einzelwerten von der CMI
-- **CoE Output Node**: Senden einzelner Werte an die CMI/Regler
-- **CoE Block Output Node**: Senden kompletter Datenblöcke (effizient)
+- **CoE Output Node**: Senden einzelner Werte an das CMI/Regler
 - **CoE Monitor**: Empfängt und überwacht Pakete von allen Quellen
 - Automatische Konvertierung analoger Werte basierend auf Unit ID
 - Unterstützung für von TA definierte Messgrößen
@@ -18,7 +16,7 @@ Eine offizielle Schnittstellen-Dokumentation durch TA fehlt. Die Umsetzung von C
 
 ## Installation
 
-### Über Node-RED Palette Manager
+### Über Node-RED Palette Manager (empfohlen)
 
 1. Öffne Node-RED
 2. Menü → Manage palette → Install
@@ -32,7 +30,7 @@ cd ~/.node-red
 npm install node-red-contrib-ta-cmi-coe
 ```
 
-### Lokale Entwicklung
+### Lokale Entwicklungsumgebung
 
 ```bash
 cd ~/.node-red
@@ -72,8 +70,9 @@ Die Bibliothek wurde für UVR610 entwickelt und getestet, funktioniert aber grun
 Erstelle zunächst eine CMI Configuration:
 - Öffne einen beliebigen Node zur Bearbeitung
 - Bei "CMI Config" auf Plus klicken → "Add new CMI config..."
-- **CMI Address**: (Feste) IP-Addresse des CMI
-- **CoE Version**: CoE V1 (Standard)
+- **Lokale IP**: IP-Adressbereich des UDP-Ports (0.0.0.0 = alle Interfaces, 127.0.0.1 = lokales Netzwerk)
+- **CMI Adresse**: (Feste) IP-Adresse des CMI
+- **CoE Version**: CoE V1/V2
 
 ### 2. CMI konfigurieren
 
@@ -96,23 +95,32 @@ Auf dem Regler: CAN-Eingang konfigurieren
 ```json
 [
     {
+        "id": "mycmi",
+        "type": "cmiconfig",
+        "name": "Mein CMI",
+        "localip": "0.0.0.0",
+        "address": "192.168.0.100",
+        "coeVersion": 1
+    },
+    {
         "id": "input_example",
         "type": "coe-input",
         "name": "Temperatur Sensor",
-        "cmiconfig": "cmi_config_id",
+        "cmiconfig": "mycmi",
         "nodeNumber": 10,
         "outputNumber": 1,
         "dataType": "analog",
+        "timeout": 20,
         "x": 150,
-        "y": 100
+        "y": 100,
+        "wires": [["debug123"]]
     },
     {
-        "id": "debug1",
+        "id": "debug123",
         "type": "debug",
-        "name": "",
+        "name": "Message",
         "x": 350,
-        "y": 100,
-        "wires": [["input_example"]]
+        "y": 100
     },
     {
         "id": "inject1",
@@ -122,20 +130,20 @@ Auf dem Regler: CAN-Eingang konfigurieren
         "payloadType": "num",
         "repeat": "",
         "x": 150,
-        "y": 200
+        "y": 200,
+        "wires": [["output_example"]]
     },
     {
         "id": "output_example",
         "type": "coe-output",
         "name": "Sollwert Heizung",
-        "cmiconfig": "cmi_config_id",
+        "cmiconfig": "mycmi",
         "nodeNumber": 11,
         "outputNumber": 5,
         "dataType": "analog",
         "unit": 1,
         "x": 350,
-        "y": 200,
-        "wires": [["inject1"]]
+        "y": 200
     }
 ]
 ```
@@ -178,94 +186,15 @@ msg.payload = 22.5;
 msg.coe = { unit: 1 };  // Überschreibt Config
 ```
 
-**Unterstützte Units:**
-- 0: Dimensionslos
-- 1: °C (Celsius)
-- 8: % (Prozent)
-- 10: kW (Kilowatt)
-- 11: kWh (Kilowattstunde)
-- 23: bar
-- 65: mbar
-- [Weitere siehe units-config.js]
-
-### CoE Block Output Node
-
-Sendet komplette Datenblöcke (effizienter).
-
-**Input Message für Analog (4 Werte):**
-```javascript
-msg.payload = [20.5, 30.0, 15.8, 25.3];
-msg.coe = { 
-    units: [1, 1, 1, 1]  // Optional: °C für alle
-};
-```
-
-**Input Message für Digital (16 Werte):**
-```javascript
-// Als Array:
-msg.payload = [1,0,1,1,0,0,0,1,1,1,0,0,1,0,1,0];
-
-// Als String:
-msg.payload = "1011000111001010";
-```
-
-## CoE Protokoll Details
-
-### Datenblöcke
-
-CoE sendet immer Datenblöcke über UDP Port 5441:
-- **Analog**: 4 Werte pro Block (12 Blöcke = 32 Ausgänge)
-- **Digital**: 16 Werte pro Block (2 Blöcke = 32 Ausgänge)
-
-| Block | Typ | Ausgänge |
-|-------|-----|----------|
-| 0 | Digital | 1-16 |
-| 1 | Analog | 1-4 |
-| 2 | Analog | 5-8 |
-| 3 | Analog | 9-12 |
-| 4 | Analog | 13-16 |
-| 5 | Analog | 17-20 |
-| 6 | Analog | 21-24 |
-| 7 | Analog | 25-28 |
-| 8 | Analog | 29-32 |
-| 9 | Digital | 17-32 |
-
-### Paketformat
-
-Jedes CoE-Paket ist 14 Bytes groß:
-
-**Analog:**
-```
-Byte 0-1:   Knoten-Nr, Block-Nr
-Byte 2-9:   4x Wert (Int16 BigEndian) Stimmt das wirklich - für kleinere Wert wird nur der 1.Byte verwendet???
-Byte 10-13: 4x Unit ID
-```
-
-**Digital:**
-```
-Byte 0-1:   Knoten-Nr, Block-Nr
-Byte 2-3:   16 Bits (UInt16 LittleEndian)
-Byte 4-13:  Padding (0)
-```
-
-### Werte-Konvertierung
-
-Analoge Werte werden dimensionslos als Signed Int16 (-32768 bis +32767) übertragen. Die Unit ID bestimmt die Nachkommastellen:
-- Standard: 2 Nachkommastellen (Wert / 100)
-- kW Leistung (Unit 44): 1 Nachkommastelle (Wert / 10)
-
-**Beispiel:**
-- Übertragen: 2250 mit Unit ID 1 (°C)
-- Angezeigt: 22.50°C
-
 ## Troubleshooting
 
 ### Keine Daten empfangen?
 
 1. **CMI CoE-Ausgänge prüfen**: IP und Port korrekt?
-2. **Firewall**: Port 5441 UDP offen?
-3. **Node Number**: Stimmt mit CMI Config überein?
-4. **Debug aktivieren**: "Receive All" aktivieren und Debug-Output prüfen
+2. **Lokale IP**: Max. Empfangsbereich mit Lokale IP = 0.0.0.0 (alle) überprüfen (insbesondere für Docker-Umgebungen)
+3. **Firewall**: Port 5441 UDP offen?
+4. **Node Number**: Stimmt mit CMI-Konfiguration überein?
+5. **Debug aktivieren**: "Receive All" aktivieren und Debug-Output prüfen
 
 ### Senden funktioniert nicht?
 
@@ -281,16 +210,15 @@ Analoge Werte werden dimensionslos als Signed Int16 (-32768 bis +32767) übertra
 
 ### Werte falsch?
 
-- **Zu große Werte**: CAN-Bus limitiert auf ±32767 (dimensionslos)
+- **Zu große Werte**: CAN-Bus V1 ist limitiert auf ±32767 (dimensionslos)
 - **Falsche Unit**: Manche Units (Arbeitszahl, Euro) haben Einschränkungen
 - **Nachkommastellen**: Prüfe ob korrekte Unit ID verwendet wird
 
 ## Bekannte Einschränkungen
 
-1. **Max. Wertbereich**: CAN-Bus limitiert auf Int16 (-32768 bis +32767 dimensionslos)
-2. **Problematische Units**: Euro, Dollar, Arbeitszahl, Dimensionslos mit 0.5 Schritten
-3. **Keine Quittierung**: CoE hat keine Bestätigung (fire-and-forget)
-4. **CMI als Gateway**: Werte können nicht direkt an CMI gesendet werden, nur an Regler
+1. **Max. Wertbereich**: CAN-Bus Version 1 ist limitiert auf ±32767 (V2 für größeren Wertebereich)
+2. **Keine Quittierung**: CoE hat keine Bestätigung (fire-and-forget)
+3. **CMI als Gateway**: Werte werden vom CMI übertragen, können aber nicht direkt an CMI gesendet werden (nur an Regler)
 
 ## Erweiterte Nutzung
 
@@ -329,47 +257,18 @@ msg.coe = { unit: 0 };  // Dimensionslos
 return msg;
 ```
 
-## Beispiele
-
-Siehe `examples/` Ordner für komplette Flows:
-- `basic-input.json` - Temperatur lesen
-- `basic-output.json` - Sollwert setzen
-- `block-output.json` - Mehrere Werte senden
-- `dashboard.json` - UI Dashboard Integration
-
-## API
-
-### Konfigurationsfunktionen (für erweiterte Nutzung)
-
-Die CoE Config Node stellt folgende Methoden bereit:
-
-```javascript
-// In eigenem Node:
-const coeConfig = RED.nodes.getNode(config.coeconfig);
-
-// Listener registrieren
-coeConfig.registerListener((data) => {
-    // data enthält: nodeNumber, blockNumber, values, units, sourceIP
-});
-
-// Daten senden
-const packet = Buffer.alloc(14);
-// ... packet füllen ...
-coeConfig.send(cmiAddress, packet);
-```
-
 ## Lizenz
 
-CC BY-NC-SA 4.0 (Creative Commons Attribution-NonCommercial-ShareAlike 4.0)
+Veröffentlicht unter der [Apache 2.0 Lizenz](LICENSE)
 
-- ✅ Privater Gebrauch kostenlos
-- ❌ Kommerzielle Nutzung: Bitte Autor kontaktieren
+- ✅ Private und gewerbliche Nutzung
 - ⚠️ Keine Haftung für Schäden durch Nutzung
 
 ## Credits
 
 Basiert auf dem Protokoll-Verständnis und der Dokumentation von:
 - [SymconJoTTACoE](https://github.com/jotata/SymconJoTTACoE/) von jotata
+- [Ta-CoE](https://gitlab.com/DeerMaximum/ta-coe) von DeerMaximum
 
 ## Support
 
@@ -377,29 +276,9 @@ Basiert auf dem Protokoll-Verständnis und der Dokumentation von:
 - **Fragen**: GitHub Discussions
 - **Dokumentation**: Siehe README und Node-RED Info-Panel
 
-## Changelog
-
-### Version 0.9.1
-- Vorbereitungen für zweisprachige Version
-- Fehlerbehebung Output-Nodes
-- Ergänzungen Dokumentation
-
-### Version 0.9.0
-- Initiale Veröffentlichung
-- CoE Input, Output und Block Output Nodes
-- Automatische Unit-Konvertierung
-- Unterstützung für alle TA Messgrößen
-- Shared UDP Socket
-- Umfassende Dokumentation
-
 ## Autor
 
 mayflo
-
-## Spenden
-
-Falls dir diese Bibliothek hilft, freue ich mich über eine Spende:
-- PayPal
 
 ---
 

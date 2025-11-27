@@ -1,5 +1,9 @@
 /**
- * CMI Configuration Node (including the shared UDP socket)
+ * CMI Configuration Node & Shared UDP socket
+ * 
+ * Copyright 2025 Florian Mayrhofer
+ * Licensed under the Apache License, Version 2.0
+ *
  */ 
 
 module.exports = function(RED) {
@@ -14,33 +18,41 @@ module.exports = function(RED) {
     function CMIConfigNode(config) {
         RED.nodes.createNode(this, config);
         const node = this;
-        
+    
+        node.lang = (RED.settings.lang.toLowerCase().startsWith("de")) ? "de" : "en";
+
         node.address = config.address || '192.168.0.100';
-        node.coeVersion = config.coeVersion || 1; // v1, v2
+        node.coeVersion = parseInt(config.coeVersion) || 1;
         node.port = (node.coeVersion === 2) ? COE_PORT2 : COE_PORT1;
-        node.localAddress = '0.0.0.0';
+        node.localAddress = config.localip || '0.0.0.0';
         node.socket = null;
         node.listeners = [];
 
-        // UDP Socket erstellen
+        // Add UDP Socket
         try {
             node.socket = dgram.createSocket({
                 type: 'udp4',
-                reuseAddr: true  // Erlaube Socket Reuse
+                reuseAddr: true  // Enable Socket Reuse
             });
             
             node.socket.on('message', (msg, rinfo) => {
-            
-                let data = null;
-                data = parseCoEPacket(msg, node.coeVersion === 2 ? 2 : 1);
+                const blocks = parseCoEPacket(msg, node.coeVersion);
                 
-                if (data) {
-                    data.sourceIP = rinfo.address;
-                    data.version = node.coeVersion;
+                if (blocks && blocks.length > 0) {
+                    const data = { // Wrapper object for meta info
+                        blocks: blocks,
+                        sourceIP: rinfo.address,
+                        version: node.coeVersion,
+                        timestamp: Date.now(),
+                        rawBuffer: msg
+                    };
 
-                    // An alle registrierten Listener weiterleiten
-                    node.listeners.forEach(listener => {
-                        listener(data);
+                    node.listeners.forEach(listener => { // Notify all listeners
+                        try {
+                            listener(data);
+                        } catch(err) {
+                            node.error(`Listener error: ${err.message}`);
+                        }
                     });
                 }
             });
@@ -50,28 +62,25 @@ module.exports = function(RED) {
             });
 
             node.socket.bind(node.port, node.localAddress, () => {
-                node.log(`CoE UDP Socket listening on ${node.localAddress}:${node.port} (${node.coeVersion})`);
+                node.log(`CoE UDP Socket is listening on ${node.localAddress}:${node.port} (CoE V${node.coeVersion})`);
             });
 
         } catch(err) {
             node.error(`Failed to create UDP socket: ${err.message}`);
         }
 
-        // Listener registrieren
-        node.registerListener = function(callback) {
+        node.registerListener = function(callback) { // Add listener
             node.listeners.push(callback);
         };
 
-        // Listener entfernen
-        node.unregisterListener = function(callback) {
+        node.unregisterListener = function(callback) { // Remove listener
             const index = node.listeners.indexOf(callback);
             if (index > -1) {
                 node.listeners.splice(index, 1);
             }
         };
 
-        // Daten senden
-        node.send = function(host, packet) {
+        node.send = function(host, packet) { // Send data
             if (node.socket) {
                 node.socket.send(packet, 0, packet.length, node.port, host, (err) => {
                     if (err) {
@@ -81,12 +90,12 @@ module.exports = function(RED) {
             }
         };
 
-        // Aufräumen beim Beenden
-        node.on('close', function() {
+        node.on('close', function() { // Cleanup on node shutdown
             if (node.socket) {
                 node.socket.close();
             }
         });
     }
     RED.nodes.registerType("cmiconfig", CMIConfigNode);
+
 };

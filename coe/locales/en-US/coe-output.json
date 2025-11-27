@@ -7,6 +7,12 @@
             "outputNumber": "Output",
             "dataType": "Data Type",
             "unit": "Unit"
+        },
+        "status": {
+            "noconfig": "No config",
+            "queued": "queued",
+            "ready": "ready",
+            "merged": "sent (merged)"
         }
     }
 }

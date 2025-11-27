@@ -1,4 +1,9 @@
-<!-- CoE Output Node -->
+<!-- 
+    CoE Output Node
+
+    Copyright 2025 Florian Mayrhofer
+    Licensed under the Apache License, Version 2.0
+-->
  
 <script type="text/javascript">
     RED.nodes.registerType('coe-output', {
@@ -14,7 +19,8 @@
         },
         inputs: 1,
         outputs: 2,
-        icon: "arrow-out.svg",
+        icon: "serial.svg",
+        outputLabels: ["message", "debug"],
         label: function() {
             const type = this.dataType === 'analog' ? 'A' : 'D';
             return this.name || `CoE Out (${type}${this.outputNumber})`;
@@ -24,26 +30,31 @@
         },
         oneditprepare: function() {
             const node = this;
-            $.getJSON('ta-cmi-coe/units', function(units) {
-                const unitSelect = $('#node-input-unit');
-                unitSelect.empty();
-                const sortedUnits = Object.entries(units).sort((a, b) => 
-                    parseInt(a[0]) - parseInt(b[0])
-                );
-                sortedUnits.forEach(([id, unit]) => {
-                    const label = unit.symbol ? 
-                        `${unit.symbol} (${unit.name})` : 
-                        unit.name;
-                    unitSelect.append($('<option>', {
-                        value: id,
-                        text: label
-                    }));
+            const langString = RED.i18n.detectLanguage() || 'en';
+            const editorLanguage = (langString.toLowerCase().startsWith("de")) ? "de" : "en";
+
+            // Populate unit dropdown
+            $.getJSON('ta-cmi-coe/units/' + editorLanguage)
+                .done(function(unitsData) {               
+                    const selectElement = $('#node-input-unit');
+                    selectElement.empty(); 
+
+                    Object.keys(unitsData).forEach(function(key) {
+                        const unit = unitsData[key];
+                        selectElement.append(
+                            $('<option></option>')
+                                .attr('value', key)
+                                .text(unit.name)
+                        );
+                    });
+
+                    // Set existing value
+                    selectElement.val(node.unit);
+                })
+                .fail(function(jqXHR, textStatus, errorThrown) {
+                    console.error("Error loading unit list:", errorThrown);
+                    RED.notify("Error loading unit list from unit-config.js.", "error");
                 });
-                unitSelect.val(node.unit);
-            }).fail(function() {
-                const unitSelect = $('#node-input-unit');
-                unitSelect.append($('<option>', { value: 0, text: 'Dimensionslos' }));
-            });
             
             $("#node-input-dataType").change(function() {
                 if ($(this).val() === "analog") {

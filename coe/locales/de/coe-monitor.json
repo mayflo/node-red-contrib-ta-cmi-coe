@@ -10,6 +10,11 @@
         },
         "placeholder": {
             "filterNodeNumber": "0 = alle"
+        },
+        "status": {
+            "monitoring": "Lauscht...",
+            "idle": "Inaktiv",
+            "node": "Knoten"
         }
     }
 }

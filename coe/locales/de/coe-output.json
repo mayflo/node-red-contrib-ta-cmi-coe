@@ -7,6 +7,12 @@
             "outputNumber": "Ausgang",
             "dataType": "Datentyp",
             "unit": "Einheit"
+        },
+        "status": {
+            "noconfig": "Nicht konfiguriert",
+            "queued": "wartet",
+            "ready": "bereit",
+            "merged": "gesendet (Paket)"
         }
     }
 }

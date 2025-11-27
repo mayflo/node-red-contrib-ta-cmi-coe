@@ -1,12 +1,18 @@
-<!-- CMI Configuration Node -->
+<!-- 
+    CMI Configuration Node
+
+    Copyright 2025 Florian Mayrhofer
+    Licensed under the Apache License, Version 2.0
+-->
  
 <script type="text/javascript">
     RED.nodes.registerType('cmiconfig', {
         category: 'config',
         defaults: {
-            name: { value: "" },
-            address: { value: "192.168.0.100" },
-            coeVersion: { value: 1 }
+            name:      { value: "" },
+            localip:   { value: "0.0.0.0" },
+            address:   { value: "192.168.0.100" },
+            coeVersion:{ value: 1 }
         },
         label: function() {
             const version = this.coeVersion || 1;
@@ -17,15 +23,27 @@
 
 <script type="text/html" data-template-name="cmiconfig">
     <div class="form-row">
-        <label for="node-config-input-name"><i class="fa fa-tag"></i> <span data-i18n="config.label.name"></span></label>
+        <label for="node-config-input-name"><i class="fa fa-tag"></i> 
+            <span data-i18n="config.label.name"></span>
+        </label>
         <input type="text" id="node-config-input-name">
     </div>
     <div class="form-row">
-        <label for="node-config-input-address"><i class="fa fa-globe"></i> <span data-i18n="config.label.address"></span></label>
+        <label for="node-config-input-localip"><i class="fa fa-wifi"></i> 
+            <span data-i18n="config.label.localip"></span>
+        </label>
+        <input type="text" id="node-config-input-localip" placeholder="0.0.0.0">
+    </div>
+    <div class="form-row">
+        <label for="node-config-input-address"><i class="fa fa-globe"></i> 
+            <span data-i18n="config.label.address"></span>
+        </label>
         <input type="text" id="node-config-input-address" placeholder="192.168.1.100">
     </div>
     <div class="form-row">
-        <label for="node-config-input-coeVersion"><i class="fa fa-cog"></i> <span data-i18n="config.label.coeVersion"></span></label>
+        <label for="node-config-input-coeVersion"><i class="fa fa-cog"></i> 
+            <span data-i18n="config.label.coeVersion"></span>
+        </label>
         <select id="node-config-input-coeVersion">
             <option value="1">V1</option>
             <option value="2">V2</option>

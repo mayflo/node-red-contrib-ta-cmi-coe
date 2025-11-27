@@ -5,10 +5,15 @@
             "cmiconfig": "CMI Config",
             "nodeNumber": "Node",
             "outputNumber": "Input",
-            "dataType": "Data Type"
+            "dataType": "Data Type",
+            "timeout": "Timeout (Min)"
         },
         "placeholder": {
             "nodeNumber": "1-62, 0 = any"
+        },
+        "status": {
+            "waiting": "waiting",
+            "waitingAny": "waiting (any node)"
         }
     }
 }

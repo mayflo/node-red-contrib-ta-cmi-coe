@@ -1,5 +1,9 @@
 /**
  * CoE Monitor Node (Receives all CoE packets)
+ * 
+ * Copyright 2025 Florian Mayrhofer
+ * Licensed under the Apache License, Version 2.0
+ *
  */ 
 
 module.exports = function(RED) {
@@ -9,9 +13,11 @@ module.exports = function(RED) {
     function CoEMonitorNode(config) {
         RED.nodes.createNode(this, config);
         const node = this;
-        const CoEVersion = config.CoEVersion;
         
         node.cmiConfig = RED.nodes.getNode(config.cmiconfig);
+
+        const lang = node.cmiConfig.lang;
+        const coeVersion = node.cmiConfig.coeVersion || 1;
         
         if (!node.cmiConfig) {
             node.error("CMI Configuration missing");
@@ -25,30 +31,31 @@ module.exports = function(RED) {
         let packetCount = 0;
         let lastUpdate = Date.now();
 
-        // Listener für eingehende Daten
-        const listener = (data) => {
+        const listener = (data) => { // Listener for incoming data
+            if (!data || !data.blocks || !Array.isArray(data.blocks)) {
+                node.warn('Received invalid data format');
+                return;
+            }
 
-            for (let block of data) {
+            for (let block of data.blocks) {
                 if (!block) continue;
 
-                // Optional: Filter nach Knoten-Nummer
-                if (node.filterNodeNumber !== null && 
+                if (node.filterNodeNumber !== null && // Filter by Node Number
                     node.filterNodeNumber !== 0 && 
                     block.nodeNumber !== node.filterNodeNumber) {
-                    return;
+                    continue;
                 }
                 
-                // Optional: Filter nach Datentyp
-                const isDigital = (block.blockNumber === 0 || block.blockNumber === 9);
+                const isDigital = (block.blockNumber === 0 || block.blockNumber === 9); // Filter by Data Type
                 const isAnalog = !isDigital;
                 
-                if (node.filterDataType === 'analog' && !isAnalog) return;
-                if (node.filterDataType === 'digital' && !isDigital) return;
+                if (node.filterDataType === 'analog' && !isAnalog) continue;
+                if (node.filterDataType === 'digital' && !isDigital) continue;
                 
                 packetCount++;
                 lastUpdate = Date.now();
                 
-                // Nachricht erstellen
+                // Build message
                 const msg = {
                     payload: {
                         nodeNumber: block.nodeNumber,
@@ -58,16 +65,17 @@ module.exports = function(RED) {
                         units: block.units,
                         sourceIP: data.sourceIP,
                         version: data.version,
-                        timestamp: new Date().toISOString()
+                        timestamp: new Date().toISOString(),
+                        rawBuffer: data.rawBuffer ? data.rawBuffer.toString('hex').toUpperCase() : null
                     },
                     topic: `coe/monitor/${block.nodeNumber}/block/${block.blockNumber}`
                 };
                 
-                // Optional: Detaillierte Aufschlüsselung für analoge Blöcke
+                // Additional Details for Analog Blocks
                 if (isAnalog && block.units) {
                     msg.payload.valuesDetailed = block.values.map((value, idx) => {
-                        const unitInfo = getUnitInfo(block.units[idx], CoEVersion);
-                        RED.log.debug(`Unit Info for unit ${block.units[idx]}: ${JSON.stringify(unitInfo)} + version: ${CoEVersion} + key: ${unitInfo.key} + symbol: ${unitInfo.symbol}`);
+                        const unitInfo = getUnitInfo(block.units[idx], lang);
+                        RED.log.debug(`Unit Info for unit ${block.units[idx]}: ${JSON.stringify(unitInfo)} + version: ${coeVersion} + key: ${unitInfo.key} + symbol: ${unitInfo.symbol}`);
                         const outputNumber = (block.blockNumber - 1) * 4 + idx + 1;
                         return {
                             outputNumber: outputNumber,
@@ -79,7 +87,7 @@ module.exports = function(RED) {
                     });
                 }
                 
-                // Optional: Detaillierte Aufschlüsselung für digitale Blöcke
+                // Additional Details for Digital Blocks
                 if (isDigital) {
                     const baseOutput = block.blockNumber === 0 ? 1 : 17;
                     msg.payload.valuesDetailed = block.values.map((value, idx) => ({
@@ -89,7 +97,7 @@ module.exports = function(RED) {
                     }));
                 }
                 
-                // Optional: Raw Data
+                // Raw Data
                 if (node.includeRaw) {
                     msg.payload.raw = block;
                 }
@@ -101,22 +109,22 @@ module.exports = function(RED) {
                 node.status({
                     fill: "green", 
                     shape: "dot", 
-                    text: `Node ${block.nodeNumber} B${block.blockNumber}[${dataTypeLabel}] - ${packetCount} pkts`
+                    text: RED._("coe-monitor.status.node") + ` ${block.nodeNumber} B${block.blockNumber}[${dataTypeLabel}] - ${packetCount} Pkts`
                 });
             }
         };
 
         node.cmiConfig.registerListener(listener);
-        node.status({fill: "grey", shape: "ring", text: "monitoring..."});
+        node.status({fill: "grey", shape: "ring", text: "coe-monitor.status.monitoring"});
 
-        // Status Update Timer (zeigt letzte Aktivität)
+        // Status Update Timer (shows last activity)
         const statusTimer = setInterval(() => {
             const secsSinceUpdate = Math.floor((Date.now() - lastUpdate) / 1000);
             if (secsSinceUpdate > 10) {
                 node.status({
                     fill: "yellow", 
                     shape: "ring", 
-                    text: `idle ${secsSinceUpdate}s - ${packetCount} pkts`
+                    text: RED._("coe-monitor.status.idle") + ` ${secsSinceUpdate}s - ${packetCount} Pkts [v${coeVersion}]`
                 });
             }
         }, 5000);
