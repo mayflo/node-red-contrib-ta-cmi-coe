@@ -1,5 +1,8 @@
 ## Changelog
 
+### Version 1.0.1
+- Beispiel Flow
+
 ### Version 1.0.0 (Erst-Release)
 - Added Support for CoE Version 2.0
 - Timeout für Input Nodes

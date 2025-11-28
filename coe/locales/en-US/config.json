@@ -2,7 +2,7 @@
     "config": {
         "label": {
             "name": "Name",
-            "localip": "Local IP",
+            "localip": "IP Range",
             "address": "CMI Address",
             "coeVersion": "CoE Version"
         }

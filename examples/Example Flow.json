@@ -1,0 +1,53 @@
+[
+    {
+        "id": "mycmi",
+        "type": "cmiconfig",
+        "name": "Mein CMI",
+        "localip": "0.0.0.0",
+        "address": "192.168.0.100",
+        "coeVersion": 1
+    },
+    {
+        "id": "input_example",
+        "type": "coe-input",
+        "name": "Temperatur Sensor",
+        "cmiconfig": "mycmi",
+        "nodeNumber": 10,
+        "outputNumber": 1,
+        "dataType": "analog",
+        "timeout": 20,
+        "x": 150,
+        "y": 100,
+        "wires": [["debug123"]]
+    },
+    {
+        "id": "debug123",
+        "type": "debug",
+        "name": "Message",
+        "x": 350,
+        "y": 100
+    },
+    {
+        "id": "inject1",
+        "type": "inject",
+        "name": "Setze Sollwert",
+        "payload": "22.5",
+        "payloadType": "num",
+        "repeat": "",
+        "x": 150,
+        "y": 200,
+        "wires": [["output_example"]]
+    },
+    {
+        "id": "output_example",
+        "type": "coe-output",
+        "name": "Sollwert Heizung",
+        "cmiconfig": "mycmi",
+        "nodeNumber": 11,
+        "outputNumber": 5,
+        "dataType": "analog",
+        "unit": 1,
+        "x": 350,
+        "y": 200
+    }
+]

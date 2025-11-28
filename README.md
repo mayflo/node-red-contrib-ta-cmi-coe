@@ -1,15 +1,16 @@
-**Status**: Erst-Release 27.11.2025
-
 # node-red-contrib-ta-cmi-coe
+
+[![Platform][platform-shield]][platform-link] [![Release][release-shield]][release-link] [![Downloads][downloads-shield]][downloads-link] 
+[![Commit][commit-shield]][commit-link] [![License][license-shield]][license-link] [![Languages][languages-shield]][languages-link]
 
 Node-RED Bibliothek zum Lesen und Schreiben von Werten an Technische Alternative CMI über CAN over Ethernet (CoE).
 
 ## Funktionsumfang
 
-- Unterstützung für CoE-Version 1 + 2
 - **CoE Input Node**: Empfang von analogen und digitalen Einzelwerten von der CMI
-- **CoE Output Node**: Senden einzelner Werte an das CMI/Regler
+- **CoE Output Node**: Senden einzelner Werte an das CMI / Regler
 - **CoE Monitor**: Empfängt und überwacht Pakete von allen Quellen
+- Unterstützung für CoE-Version 1 & 2
 - Automatische Konvertierung analoger Werte basierend auf Unit ID
 - Unterstützung für von TA definierte Messgrößen
 - Konfiguration von CMI und CoE-Version
@@ -45,7 +46,6 @@ Starte Node-RED neu.
 
 ## Voraussetzungen
 
-- Node-RED v1.0.0 oder höher
 - CMI von Technische Alternative mit Firmware 1.39.1 oder höher
 - Die verwendete CoE-Version wird auf dem CMI konfiguriert (Einstellungen > CAN > CoE).
 - Für Empfang: CoE-Ausgänge müssen auf der CMI konfiguriert werden (Einstellungen > Ausgänge > CoE).
@@ -65,88 +65,30 @@ Die Bibliothek wurde für UVR610 entwickelt und getestet, funktioniert aber grun
 
 ## Schnellstart
 
-### 1. CMI Configuration Node erstellen
+### 1. CMI Konfigurations-Node erstellen
 
-Erstelle zunächst eine CMI Configuration:
+Erstelle zunächst eine CMI Konfiguration:
 - Öffne einen beliebigen Node zur Bearbeitung
-- Bei "CMI Config" auf Plus klicken → "Add new CMI config..."
-- **Lokale IP**: IP-Adressbereich des UDP-Ports (0.0.0.0 = alle Interfaces, 127.0.0.1 = lokales Netzwerk)
+- Bei "CMI Konfig" auf Plus klicken → "Neuen Knoten hinzufügen..."
+- **IP-Bereich**: IP-Adressbereich des UDP-Ports (0.0.0.0 = alle Interfaces, 127.0.0.1 = lokales Netzwerk)
 - **CMI Adresse**: (Feste) IP-Adresse des CMI
-- **CoE Version**: CoE V1/V2
+- **CoE Version**: CoE V1/V2 (siehe CMI Einstellungen → CAN)
 
 ### 2. CMI konfigurieren
 
-#### Für Empfang (CoE Input):
+#### Für Empfang vom CMI (CoE Input):
 Auf der CMI unter **Einstellungen → Ausgänge → CoE**:
 - **Eingang**: CAN-Bus Eingang (z.B. CAN1)
 - **IP**: IP-Adresse von Node-RED
 - **Knoten**: Wert aus "Node Number" des Input Nodes
 - **Netzwerkausgang**: Nummer des Ausgangs (1-32)
-- **Sendebedingung**: Nach Bedarf
+- **Sendebedingung**: nach Bedarf
 
-#### Für Senden (CoE Output):
+#### Für Senden an CMI (CoE Output):
 Auf dem Regler: CAN-Eingang konfigurieren
 - **Knoten**: Wert aus "Node Number" des Output Nodes
 - **Ausgangsnummer**: Nummer des Ausgangs (1-32)
 - **Messgröße**: "Automatisch" für Unit von Node-RED
-
-### 3. Beispiel Flow
-
-```json
-[
-    {
-        "id": "mycmi",
-        "type": "cmiconfig",
-        "name": "Mein CMI",
-        "localip": "0.0.0.0",
-        "address": "192.168.0.100",
-        "coeVersion": 1
-    },
-    {
-        "id": "input_example",
-        "type": "coe-input",
-        "name": "Temperatur Sensor",
-        "cmiconfig": "mycmi",
-        "nodeNumber": 10,
-        "outputNumber": 1,
-        "dataType": "analog",
-        "timeout": 20,
-        "x": 150,
-        "y": 100,
-        "wires": [["debug123"]]
-    },
-    {
-        "id": "debug123",
-        "type": "debug",
-        "name": "Message",
-        "x": 350,
-        "y": 100
-    },
-    {
-        "id": "inject1",
-        "type": "inject",
-        "name": "Setze Sollwert",
-        "payload": "22.5",
-        "payloadType": "num",
-        "repeat": "",
-        "x": 150,
-        "y": 200,
-        "wires": [["output_example"]]
-    },
-    {
-        "id": "output_example",
-        "type": "coe-output",
-        "name": "Sollwert Heizung",
-        "cmiconfig": "mycmi",
-        "nodeNumber": 11,
-        "outputNumber": 5,
-        "dataType": "analog",
-        "unit": 1,
-        "x": 350,
-        "y": 200
-    }
-]
-```
 
 ## Node Typen
 
@@ -191,35 +133,33 @@ msg.coe = { unit: 1 };  // Überschreibt Config
 
 ### Keine Daten empfangen?
 
-1. **CMI CoE-Ausgänge prüfen**: IP und Port korrekt?
-2. **Lokale IP**: Max. Empfangsbereich mit Lokale IP = 0.0.0.0 (alle) überprüfen (insbesondere für Docker-Umgebungen)
-3. **Firewall**: Port 5441/UDP (CoE V1) bzw. 5442/UDP (CoE V2) offen?
-4. **Node Number**: Stimmt mit CMI-Konfiguration überein?
+1. **CMI CoE-Ausgänge prüfen**: sind IP und Port korrekt?
+2. **Lokale IP**: den max. Empfangsbereich mit Lokale IP = 0.0.0.0 (alle) probieren (insbesondere für Docker-Umgebungen)
+3. **Firewall**: sind in der Firewall Port 5441/UDP (CoE V1) bzw. 5442/UDP (CoE V2) geöffnet?
+4. **Node Number**: stimmt mit CMI-Konfiguration überein?
 5. **Debug aktivieren**: "Receive All" aktivieren und Debug-Output prüfen
 
 ### Senden funktioniert nicht?
 
 1. **CMI erreichbar?** Ping zur CMI IP
-2. **CAN-Eingang auf Regler**: Knoten-Nr und Ausgangsnr korrekt?
+2. **CAN-Eingang auf Regler**: sind Knoten-Nr und Ausgangsnr korrekt?
 3. **Timeout auf Regler?** "Sende Ausgänge alle" Intervall nutzen
 
 ### Mehrere CMIs?
 
-- Verwende unterschiedliche Node Numbers
-- ODER verwende unterschiedliche Blocks
-- Sonst überschreiben sich die Werte gegenseitig!
+- Es müssen unterschiedliche Knoten-Nummern oder unterschiedliche Blocks verwendet werden.
 
 ### Werte falsch?
 
-- **Zu große Werte**: CAN-Bus V1 ist limitiert auf ±32767 (dimensionslos)
-- **Falsche Unit**: Manche Units (Arbeitszahl, Euro) haben Einschränkungen
-- **Nachkommastellen**: Prüfe ob korrekte Unit ID verwendet wird
+- **Zu große Werte**: CAN-Bus V1 ist limitiert auf ±32.767 (dimensionslos)
+- **Falsche Unit**: Manche Einheiten (Arbeitszahl, Euro) haben Einschränkungen
+- **Nachkommastellen**: Prüfe ob korrekte Einheiten-ID verwendet wird
 
 ## Bekannte Einschränkungen
 
-1. **Max. Wertbereich**: CAN-Bus Version 1 ist limitiert auf ±32767 (V2 für größeren Wertebereich)
-2. **Keine Quittierung**: CoE hat keine Bestätigung (fire-and-forget)
-3. **CMI als Gateway**: Werte werden vom CMI übertragen, können aber nicht direkt an CMI gesendet werden (nur an Regler)
+1. **Max. Wertbereich**: CAN-Bus Version 1 ist limitiert auf ±32.767 (V2 für größeren Wertebereich)
+2. **Keine Quittierung**: CoE hat keine Bestätigung (Fire-and-forget)
+3. **Das CMI funktioniert als Gateway**: Werte werden zwar vom CMI über CoE übertragen, können aber nicht direkt an CMI gesendet werden. Die Werte werden vom CMI an den CAN-Bus weitergeleitet und von den Reglern ausgelesen.
 
 ## Erweiterte Nutzung
 
@@ -268,10 +208,28 @@ Basiert auf dem Protokoll-Verständnis und der Dokumentation von:
 - **Fragen**: GitHub Discussions
 - **Dokumentation**: Siehe README und Node-RED Info-Panel
 
-## Autor
+## Author
 
-mayflo
+[![Author][author-shield]][author-link]
+[![BuyMeCoffee][buymecoffee-shield]][buymecoffee-link]
 
 ---
 
-**Hinweis**: Diese Bibliothek wurde in der Freizeit entwickelt. Support erfolgt nach Verfügbarkeit. Besten Dank für dein Verständnis! 😊
+**Hinweis**: Diese Bibliothek wurde in der Freizeit entwickelt. Support erfolgt nach Verfügbarkeit. 😊
+
+[platform-link]: https://nodered.org
+[platform-shield]: https://img.shields.io/badge/platform-Node--RED-red?style=flat
+[release-link]: https://www.npmjs.com/package/node-red-contrib-ta-cmi-coe
+[release-shield]: https://img.shields.io/npm/v/node-red-contrib-ta-cmi-coe?style=flat
+[date-link]: https://github.com/mayflo/node-red-contrib-ta-cmi-coe/releases
+[date-shield]: https://img.shields.io/github/release-date/mayflo/node-red-contrib-ta-cmi-coe?style=flat
+[downloads-link]: https://www.npmjs.com/package/node-red-contrib-ta-cmi-coe
+[downloads-shield]: https://img.shields.io/npm/d18m/node-red-contrib-ta-cmi-coe?style=flat
+[license-link]: https://github.com/mayflo/node-red-contrib-ta-cmi-coe/blob/main/LICENSE
+[license-shield]: https://img.shields.io/badge/license-Apache%202.0-blue?style=flat?style=flat
+[languages-link]: https://github.com/mayflo/node-red-contrib-ta-cmi-coe
+[languages-shield]: https://img.shields.io/github/languages/count/mayflo/node-red-contrib-ta-cmi-coe?style=flat
+[author-link]: https://github.com/mayflo
+[author-shield]: https://img.shields.io/badge/author-mayflo-orange?style=for-the-badge&logo=github
+[buymecoffee-link]: https://www.buymeacoffee.com/mayflo
+[buymecoffee-shield]: https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png

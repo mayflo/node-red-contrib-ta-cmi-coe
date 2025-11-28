@@ -16,6 +16,7 @@
     "automation"
   ],
   "node-red": {
+    "version": ">=1.0.0",
     "nodes": {
       "coe-input": "coe/coe-input.js",
       "coe-output": "coe/coe-output.js",
@@ -25,7 +26,9 @@
     }
   },
   "dependencies": {},
-  "devDependencies": {},
+  "devDependencies": {
+    "jest": "^30.2.0"
+  },
   "engines": {
     "node": ">=14.0.0"
   },
