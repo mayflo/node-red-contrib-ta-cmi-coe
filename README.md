@@ -27,7 +27,7 @@ Node-RED Bibliothek zum Lesen und Schreiben von Werten an Technische Alternative
 
 ```bash
 cd ~/.node-red
-npm install node-red-contrib-ta-cmi-coe
+npm install @mayflo/node-red-ta-cmi-coe
 ```
 
 ### Lokale Entwicklungsumgebung
