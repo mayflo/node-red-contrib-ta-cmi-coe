@@ -20,7 +20,7 @@ Node-RED Bibliothek zum Lesen und Schreiben von Werten an Technische Alternative
 
 1. Öffne Node-RED
 2. Menü → Manage palette → Install
-3. Suche nach `node-red-contrib-ta-cmi-coe`
+3. Suche nach `@mayflo/node-red-ta-cmi-coe`
 4. Installiere das Paket
 
 ### Manuelle Installation
@@ -34,11 +34,11 @@ npm install @mayflo/node-red-ta-cmi-coe
 
 ```bash
 cd ~/.node-red
-git clone https://github.com/mayflo/node-red-contrib-ta-cmi-coe.git
-cd node-red-contrib-ta-cmi-coe
+git clone https://github.com/mayflo/node-red-ta-cmi-coe.git
+cd node-red-ta-cmi-coe
 npm link
 cd ~/.node-red
-npm link node-red-contrib-ta-cmi-coe
+npm link node-red-ta-cmi-coe
 ```
 
 Starte Node-RED neu.
