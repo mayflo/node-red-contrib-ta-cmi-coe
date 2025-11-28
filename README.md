@@ -1,7 +1,6 @@
 # node-red-contrib-ta-cmi-coe
 
-[![Platform][platform-shield]][platform-link] [![Release][release-shield]][release-link] [![Downloads][downloads-shield]][downloads-link] 
-[![Commit][commit-shield]][commit-link] [![License][license-shield]][license-link] [![Languages][languages-shield]][languages-link]
+[![Platform][platform-shield]][platform-link] [![Release][release-shield]][release-link] [![Downloads][downloads-shield]][downloads-link] [![CommitDate][date-shield]][date-link] [![License][license-shield]][license-link] [![Languages][languages-shield]][languages-link]
 
 Node-RED Bibliothek zum Lesen und Schreiben von Werten an Technische Alternative CMI über CAN over Ethernet (CoE).
 
@@ -14,6 +13,12 @@ Node-RED Bibliothek zum Lesen und Schreiben von Werten an Technische Alternative
 - Automatische Konvertierung analoger Werte basierend auf Unit ID
 - Unterstützung für von TA definierte Messgrößen
 - Konfiguration von CMI und CoE-Version
+
+---
+
+[![BuyMeCoffee][buymecoffee-shield]][buymecoffee-link]
+
+---
 
 ## Installation
 
@@ -204,14 +209,13 @@ Basiert auf dem Protokoll-Verständnis und der Dokumentation von:
 
 ## Support
 
-- **Issues**: GitHub Issue Tracker
-- **Fragen**: GitHub Discussions
-- **Dokumentation**: Siehe README und Node-RED Info-Panel
+- **Issues**: [GitHub Issue Tracker](https://github.com/mayflo/node-red-contrib-ta-cmi-coe/issues)
+- 
+- **Dokumentation**: Siehe README
 
 ## Author
 
 [![Author][author-shield]][author-link]
-[![BuyMeCoffee][buymecoffee-shield]][buymecoffee-link]
 
 ---
 
@@ -230,6 +234,6 @@ Basiert auf dem Protokoll-Verständnis und der Dokumentation von:
 [languages-link]: https://github.com/mayflo/node-red-contrib-ta-cmi-coe
 [languages-shield]: https://img.shields.io/github/languages/count/mayflo/node-red-contrib-ta-cmi-coe?style=flat
 [author-link]: https://github.com/mayflo
-[author-shield]: https://img.shields.io/badge/author-mayflo-orange?style=for-the-badge&logo=github
+[author-shield]: https://img.shields.io/badge/author-mayflo-orange?style=flat&logo=github
 [buymecoffee-link]: https://www.buymeacoffee.com/mayflo
 [buymecoffee-shield]: https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png
