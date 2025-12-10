@@ -6,13 +6,19 @@
             "nodeNumber": "Node",
             "outputNumber": "Output",
             "dataType": "Data Type",
-            "unit": "Unit"
+            "unit": "Unit",
+            "sendConditions": "Sending Conditions",
+            "minChange": "If change >",
+            "blockingTime": "Blocking Time",
+            "maxInterval": "Interval Time"
         },
         "status": {
             "noconfig": "No config",
             "queued": "queued",
             "ready": "ready",
-            "merged": "sent (merged)"
+            "merged": "sent (merged)",
+            "retransmit": "retransmit",
+            "suppressed": "suppressed"
         }
     }
 }

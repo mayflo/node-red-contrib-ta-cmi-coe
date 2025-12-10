@@ -6,13 +6,19 @@
             "nodeNumber": "Knoten",
             "outputNumber": "Ausgang",
             "dataType": "Datentyp",
-            "unit": "Einheit"
+            "unit": "Einheit",
+            "sendConditions": "Sendebedingungen",
+            "minChange": "bei Änderung >",
+            "blockingTime": "Blockierzeit",
+            "maxInterval": "Intervallzeit"
         },
         "status": {
             "noconfig": "Nicht konfiguriert",
             "queued": "wartet",
             "ready": "bereit",
-            "merged": "gesendet (Paket)"
+            "merged": "gesendet (Paket)",
+            "retransmit": "wartet (update)",
+            "suppressed": "unterdrückt"
         }
     }
 }

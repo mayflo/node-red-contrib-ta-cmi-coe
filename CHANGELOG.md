@@ -1,26 +1,31 @@
 ## Changelog
 
-### Version 1.0.1
-- Beispiel Flow
+### Version 1.0.2
+- Added unit ppb
+- Added transmission conditions (output node)
+- Bug fixes
 
-### Version 1.0.0 (Erst-Release)
-- Added Support for CoE Version 2.0
-- Timeout für Input Nodes
-- Konfiguration Adresse UDP-Listener
-- Ergänzungen Dokumentation
-- Einstellung des Block Output Nodes
-- Zweisprachige Einheiten
-- Bug-Fixes
+### Version 1.0.1
+- Example flow
+
+### Version 1.0.0 (Initial Release)
+- Added support for CoE Version 2.0
+- Input node timeout
+- UDP listener address configuration
+- Enhanced documentation
+- Block output node settings
+- Bilingual units
+- Bug fixes
 
 ### Version 0.9.1
-- Vorbereitungen für zweisprachige Version
-- Fehlerbehebung Output-Nodes
-- Ergänzungen Dokumentation
+- Preparations for bilingual version
+- Output node bug fixes
+- Enhanced documentation
 
 ### Version 0.9.0
-- Initiale Veröffentlichung
-- CoE Input, Output und Block Output Nodes
-- Automatische Unit-Konvertierung
-- Unterstützung für alle TA Messgrößen
-- Shared UDP Socket
-- Umfassende Dokumentation
+- Initial release
+- CoE input, output, and block output nodes
+- Automatic unit conversion
+- Support for all TA measurement variables
+- Shared UDP socket
+- ​​Comprehensive documentation

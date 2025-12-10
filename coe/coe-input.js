@@ -33,7 +33,7 @@ module.exports = function(RED) {
         node.blockState = {};
         
         // Calculate block & position
-        const blockInfo = getBlockInfo(node.dataType, node.outputNumber);
+        const block = getBlockInfo(node.dataType, node.nodeNumber, node.outputNumber);
 
         // Set Timer for CoE timeout
         const timeoutMs = (config.timeout || 20) * 60 * 1000; // Timeout in milliseconds
@@ -48,6 +48,8 @@ module.exports = function(RED) {
                 return;
             }
             
+            let foundMatchingBlock = false;
+
             for (let incomingBlock of data.blocks) {
                 if (!incomingBlock) continue;
                 
@@ -59,7 +61,7 @@ module.exports = function(RED) {
                 }
                 
                 // Filter Block number
-                if (incomingBlock.blockNumber !== blockInfo.block) {
+                if (incomingBlock.blockNumber !== block.number) {
                     continue;
                 }
                 
@@ -75,10 +77,10 @@ module.exports = function(RED) {
                 // Extract Values from merged block                
                 let value, unit; 
                 if (node.dataType === 'analog') {
-                    value = mergedBlock.values[blockInfo.position];
-                    unit = mergedBlock.units ? mergedBlock.units[blockInfo.position] : null;
+                    value = mergedBlock.values[block.position];
+                    unit = mergedBlock.units ? mergedBlock.units[block.position] : null;
                 } else {
-                    value = mergedBlock.values[blockInfo.position] ? true : false;
+                    value = mergedBlock.values[block.position] ? true : false;
                     unit = null;
                 }
                 
@@ -114,6 +116,9 @@ module.exports = function(RED) {
                     text: currentNodeText
                 });
                 
+                foundMatchingBlock = true;
+            }
+            if (foundMatchingBlock) {
                 resetTimeout();
             }
         };

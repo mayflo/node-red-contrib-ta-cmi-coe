@@ -1,18 +1,20 @@
 # node-red-contrib-ta-cmi-coe
 
+[🇩🇪 Deutsch](README.de.md)
+
 [![Platform][platform-shield]][platform-link] [![Release][release-shield]][release-link] [![Downloads][downloads-shield]][downloads-link] [![CommitDate][date-shield]][date-link] [![License][license-shield]][license-link] [![Languages][languages-shield]][languages-link]
 
-Node-RED Bibliothek zum Lesen und Schreiben von Werten an Technische Alternative CMI über CAN over Ethernet (CoE).
+Node-RED library for reading and writing values ​​to Technische Alternative CMI via CAN over Ethernet (CoE).
 
-## Funktionsumfang
+## Functionality
 
-- **CoE Input Node**: Empfang von analogen und digitalen Einzelwerten von der CMI
-- **CoE Output Node**: Senden einzelner Werte an das CMI / Regler
-- **CoE Monitor**: Empfängt und überwacht Pakete von allen Quellen
-- Unterstützung für CoE-Version 1 & 2
-- Automatische Konvertierung analoger Werte basierend auf Unit ID
-- Unterstützung für von TA definierte Messgrößen
-- Konfiguration von CMI und CoE-Version
+- **CoE Input Node**: Receives individual analog and digital values ​​from the CMI
+- **CoE Output Node**: Sends individual values ​​to the CMI/controller
+- **CoE Monitor**: Receives and monitors packets from all sources
+- Support for CoE versions 1 & 2
+- Automatic conversion of analog values ​​based on Unit ID
+- Support for TA-defined measurement parameters
+- Configuration of CMI and CoE version
 
 ---
 
@@ -22,21 +24,21 @@ Node-RED Bibliothek zum Lesen und Schreiben von Werten an Technische Alternative
 
 ## Installation
 
-### Über Node-RED Palette Manager (empfohlen)
+### Via Node-RED Palette Manager (recommended)
 
-1. Öffne Node-RED
-2. Menü → Manage palette → Install
-3. Suche nach `node-red-contrib-ta-cmi-coe`
-4. Installiere das Paket
+1. Open Node-RED
+2. Menu → Manage palette → Install
+3. Search for `node-red-contrib-ta-cmi-coe`
+4. Install the package
 
-### Manuelle Installation
+### Manual Installation
 
 ```bash
 cd ~/.node-red
 npm install node-red-contrib-ta-cmi-coe
 ```
 
-### Lokale Entwicklungsumgebung
+### Local Development Environment
 
 ```bash
 cd ~/.node-red
@@ -47,171 +49,153 @@ cd ~/.node-red
 npm link node-red-contrib-ta-cmi-coe
 ```
 
-Starte Node-RED neu.
+Restart Node-RED.
 
-## Voraussetzungen
+## Prerequisites
 
-- CMI von Technische Alternative mit Firmware 1.39.1 oder höher
-- Die verwendete CoE-Version wird auf dem CMI konfiguriert (Einstellungen > CAN > CoE).
-- Für Empfang: CoE-Ausgänge müssen auf der CMI konfiguriert werden (Einstellungen > Ausgänge > CoE).
-- Für Senden: CAN-Eingänge müssen auf dem Regler konfiguriert werden.
-- Für den Empfang von Nachrichten benötigt die verwendeten CMIs eine fest eingestellte IP-Addresse
-- Die Kommunikation erfolgt über UDP-Ports, welche auf dem Node-RED-Host geöffnet werden müssen (CoE V1 Port 5441 / CoE V2 Port 5442)
+- CMI from Technische Alternative with firmware 1.39.1 or higher
+- The CoE version used is configured on the CMI (Settings > CAN > CoE).
+- For receive: CoE outputs must be configured on the CMI (Settings > Outputs > CoE).
+- For transmit: CAN inputs must be configured on the controller.
+- To receive messages, the CMIs used require a fixed IP address.
+- Communication takes place via UDP ports, which must be opened on the Node-RED host (CoE V1 Port 5441 / CoE V2 Port 5442).
 
-## Unterstützte Geräte
+## Supported Devices
 
-Die Bibliothek wurde für UVR610 entwickelt und getestet, funktioniert aber grundsätzlich mit allen Geräten, die über den CAN-Bus der CMI verbunden sind:
-
+The library was developed and tested for the UVR610, but it works with all devices connected via the CMI's CAN bus:
 - UVR16x2
 - UVR1611
 - UVR61-3
-- X2 Regler
-- Andere CAN-Bus Geräte von Technische Alternative
+- X2 Controller
+- Other CAN bus devices from Technische Alternative
 
-## Schnellstart
+## Quick Start
 
-### 1. CMI Konfigurations-Node erstellen
+### 1. Create a CMI Configuration Node
 
-Erstelle zunächst eine CMI Konfiguration:
-- Öffne einen beliebigen Node zur Bearbeitung
-- Bei "CMI Konfig" auf Plus klicken → "Neuen Knoten hinzufügen..."
-- **IP-Bereich**: IP-Adressbereich des UDP-Ports (0.0.0.0 = alle Interfaces, 127.0.0.1 = lokales Netzwerk)
-- **CMI Adresse**: (Feste) IP-Adresse des CMI
-- **CoE Version**: CoE V1/V2 (siehe CMI Einstellungen → CAN)
+First, create a CMI configuration:
+- Open any node for editing
+- Click the plus sign next to "CMI Config" → "Add new node..."
+- **IP Range**: IP address range of the UDP port (0.0.0.0 = all interfaces, 127.0.0.1 (local network)
+- **CMI Address**: (Fixed) IP address of the CMI
+- **CoE Version**: CoE V1/V2 (see CMI Settings → CAN)
 
-### 2. CMI konfigurieren
+### 2. Configure the CMI
 
-#### Für Empfang vom CMI (CoE Input):
-Auf der CMI unter **Einstellungen → Ausgänge → CoE**:
-- **Eingang**: CAN-Bus Eingang (z.B. CAN1)
-- **IP**: IP-Adresse von Node-RED
-- **Knoten**: Wert aus "Node Number" des Input Nodes
-- **Netzwerkausgang**: Nummer des Ausgangs (1-32)
-- **Sendebedingung**: nach Bedarf
+#### For receiving from the CMI (CoE Input):
+On the CMI under **Settings → Outputs → CoE**:
+- **Input**: CAN bus input (e.g., CAN1)
+- **IP**: IP address of Node-RED
+- **Node**: Value from the "Node Number" of the input node
+- **Network Output**: Number of the output (1-32)
+- **Transmit Condition**: As required
 
-#### Für Senden an CMI (CoE Output):
-Auf dem Regler: CAN-Eingang konfigurieren
-- **Knoten**: Wert aus "Node Number" des Output Nodes
-- **Ausgangsnummer**: Nummer des Ausgangs (1-32)
-- **Messgröße**: "Automatisch" für Unit von Node-RED
+#### For sending to the CMI (CoE Output):
+On the controller: Configure the CAN input
+- **Node**: Value from the "Node Number" of the output node
+- **Output Number**: Number of the output (1-32)
+- **Measured Unit**: "Automatic" for Node-RED Unit
 
-## Node Typen
+## Node Types
 
 ### CoE Input Node
 
-Empfängt Werte von der CMI.
+Receives values ​​from the CMI.
 
 **Output Message:**
 ```javascript
 {
-    payload: 22.5,                    // Der Wert
+    payload: 22.5,                    // The value
     topic: "coe/10/analog/1",         // Format: coe/{node}/{type}/{output}
     coe: {
-        nodeNumber: 10,               // CAN Knoten-Nummer
-        blockNumber: 1,               // CoE Block-Nummer
-        outputNumber: 1,              // Netzwerkausgang
-        dataType: "analog",           // Typ
+        nodeNumber: 10,               // CAN Node Number
+        blockNumber: 1,               // CoE Block Number
+        outputNumber: 1,              // Network Output
+        dataType: "analog",           // Type
         unit: 1,                      // Unit ID (z.B. 1 = °C)
-        unitName: "Temperatur °C",    // Unit Name
-        unitSymbol: "°C°",            // Unit Symbol
-        sourceIP: "192.168.1.100",    // IP der CMI
-        raw: { ... }                  // Rohdaten
+        unitName: "Temperature °C",   // Unit name
+        unitSymbol: "°C°",            // Unit symbol
+        sourceIP: "192.168.1.100",    // IP of the CMI
+        raw: { ... }                  // Raw datta
     }
 }
 ```
 
 ### CoE Output Node
 
-Sendet einzelne Werte an die CMI.
+Sends individual values ​​to the CMI.
 
 **Input Message:**
 ```javascript
-// Einfach:
+// Simple:
 msg.payload = 22.5;
 
-// Mit eigener Unit:
+// With own unit:
 msg.payload = 22.5;
-msg.coe = { unit: 1 };  // Überschreibt Config
+msg.coe = { unit: 1 };  // Overrides config
 ```
 
 ## Troubleshooting
 
-### Keine Daten empfangen?
+### Not receiving any data?
 
-1. **CMI CoE-Ausgänge prüfen**: sind IP und Port korrekt?
-2. **Lokale IP**: den max. Empfangsbereich mit Lokale IP = 0.0.0.0 (alle) probieren (insbesondere für Docker-Umgebungen)
-3. **Firewall**: sind in der Firewall Port 5441/UDP (CoE V1) bzw. 5442/UDP (CoE V2) geöffnet?
-4. **Node Number**: stimmt mit CMI-Konfiguration überein?
-5. **Debug aktivieren**: "Receive All" aktivieren und Debug-Output prüfen
+1. **Check CMI CoE outputs**: Are the IP address and port correct?
+2. **Local IP**: Try the maximum receive range with Local IP = 0.0.0.0 (all) (especially for Docker environments)
+3. **Firewall**: Are ports 5441/UDP (CoE V1) or 5442/UDP (CoE V2) open in the firewall?
+4. **Node Number**: Does it match the CMI configuration?
+5. **Enable Debug**: Activate "Receive All" and check the debug output.
 
-### Senden funktioniert nicht?
+### Sending not working?
 
-1. **CMI erreichbar?** Ping zur CMI IP
-2. **CAN-Eingang auf Regler**: sind Knoten-Nr und Ausgangsnr korrekt?
-3. **Timeout auf Regler?** "Sende Ausgänge alle" Intervall nutzen
+1. **Is the CMI reachable?** Ping the CMI IP address.
+2. **CAN input on controller**: Are the node number and output number correct?
+3. **Timeout on controller?** Use the "Send all outputs" interval.
 
-### Mehrere CMIs?
+### Multiple CMIs?
 
-- Es müssen unterschiedliche Knoten-Nummern oder unterschiedliche Blocks verwendet werden.
+- Different node numbers must be used.
 
-### Werte falsch?
+### Incorrect values?
 
-- **Zu große Werte**: CAN-Bus V1 ist limitiert auf ±32.767 (dimensionslos)
-- **Falsche Unit**: Manche Einheiten (Arbeitszahl, Euro) haben Einschränkungen
-- **Nachkommastellen**: Prüfe ob korrekte Einheiten-ID verwendet wird
+- **Values ​​too large**: CAN bus V1 is limited to ±32,767 (dimensionless)
+- **Incorrect unit**: Some units (working number, Euro) have limitations
+- **Decimal places**: Check if the correct unit ID is being used
 
-## Bekannte Einschränkungen
+## Known limitations
 
-1. **Max. Wertbereich**: CAN-Bus Version 1 ist limitiert auf ±32.767 (V2 für größeren Wertebereich)
-2. **Keine Quittierung**: CoE hat keine Bestätigung (Fire-and-forget)
-3. **Das CMI funktioniert als Gateway**: Werte werden zwar vom CMI über CoE übertragen, können aber nicht direkt an CMI gesendet werden. Die Werte werden vom CMI an den CAN-Bus weitergeleitet und von den Reglern ausgelesen.
+1. **Max. value range**: CAN bus version 1 is limited to ±32,767 (V2 for a larger value range)
+2. **No acknowledgment**: CoE does not provide confirmation (fire-and-forget)
+3. **The CMI functions as a gateway**: Values ​​are transmitted from the CMI via CoE, but cannot be sent directly to the CMI. The values ​​are forwarded from the CMI to the CAN bus and read by the controllers.
 
-## Erweiterte Nutzung
-
-### Periodisches Senden (verhindert Timeout)
-
-```javascript
-// In Function Node:
-const intervalMinutes = 5;
-
-// Timer starten
-if (!context.timer) {
-    context.timer = setInterval(() => {
-        node.send({ payload: msg.payload });
-    }, intervalMinutes * 60 * 1000);
-}
-
-return msg;
-```
+## Extended Usage
 
 ### Custom Unit Conversion
 
 ```javascript
-// In Function Node vor Output:
-const rawValue = msg.payload * 100;  // 2 Nachkommastellen
+// In Function Node before output:
+const rawValue = msg.payload * 100;  // 2 decimal places
 msg.payload = rawValue;
-msg.coe = { unit: 0 };  // Dimensionslos
+msg.coe = { unit: 0 };  // dimensionless
 return msg;
 ```
 
-## Lizenz
+## License
 
-Veröffentlicht unter der [Apache 2.0 Lizenz](LICENSE)
+Published under the Apache 2.0 License
 
-- ✅ Private und gewerbliche Nutzung
-- ⚠️ Keine Haftung für Schäden durch Nutzung
+- ✅ Private and commercial use
+- ⚠️ No liability for damages resulting from use
 
 ## Credits
 
-Basiert auf dem Protokoll-Verständnis und der Dokumentation von:
-- [SymconJoTTACoE](https://github.com/jotata/SymconJoTTACoE/) von jotata
-- [Ta-CoE](https://gitlab.com/DeerMaximum/ta-coe) von DeerMaximum
+Based on the protocol understanding and documentation of:
+- [SymconJoTTACoE](https://github.com/jotata/SymconJoTTACoE/) by jotata
+- [Ta-CoE](https://gitlab.com/DeerMaximum/ta-coe) by DeerMaximum
 
 ## Support
 
 - **Issues**: [GitHub Issue Tracker](https://github.com/mayflo/node-red-contrib-ta-cmi-coe/issues)
-- 
-- **Dokumentation**: Siehe README
+- **Dokumentation**: view README
 
 ## Author
 
@@ -219,7 +203,7 @@ Basiert auf dem Protokoll-Verständnis und der Dokumentation von:
 
 ---
 
-**Hinweis**: Diese Bibliothek wurde in der Freizeit entwickelt. Support erfolgt nach Verfügbarkeit. 😊
+**Note**: This library was developed in my free time. Support is provided as it becomes available. 😊
 
 [platform-link]: https://nodered.org
 [platform-shield]: https://img.shields.io/badge/platform-Node--RED-red?style=flat

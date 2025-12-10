@@ -7,6 +7,12 @@
         <li><b>Data Type:</b> Analog (numeric) or Digital (boolean)</li>
         <li><b>Unit:</b> Measurement unit (analog only)</li>
     </ul>
+    <h3>Sending Conditions</h3>
+    <ul>
+        <li><b>If change >:</b> Retransmit only, if the current value has changed by more than this value (analog values).</li>
+        <li><b>Blocking Time:</b> Retransmit only, if time has passed (seconds).</li>
+        <li><b>Interval Time:</b> If value has not changed, retransmit after interval (minutes).</li>
+    </ul>
     <h3>Outputs</h3>
     <p><b>2 outputs:</b> [0] Message passthrough, [1] Debug info (Hex, Block-State, Units)</p>
     <h3>Notes</h3>

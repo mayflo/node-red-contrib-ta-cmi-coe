@@ -2,7 +2,7 @@
     {
         "id": "mycmi",
         "type": "cmiconfig",
-        "name": "Mein CMI",
+        "name": "My CMI",
         "localip": "0.0.0.0",
         "address": "192.168.0.100",
         "coeVersion": 1
@@ -10,7 +10,7 @@
     {
         "id": "input_example",
         "type": "coe-input",
-        "name": "Temperatur Sensor",
+        "name": "Temperature Sensor",
         "cmiconfig": "mycmi",
         "nodeNumber": 10,
         "outputNumber": 1,
@@ -30,7 +30,7 @@
     {
         "id": "inject1",
         "type": "inject",
-        "name": "Setze Sollwert",
+        "name": "Set Target Value",
         "payload": "22.5",
         "payloadType": "num",
         "repeat": "",
@@ -41,12 +41,15 @@
     {
         "id": "output_example",
         "type": "coe-output",
-        "name": "Sollwert Heizung",
+        "name": "Target Value Heating",
         "cmiconfig": "mycmi",
         "nodeNumber": 11,
         "outputNumber": 5,
         "dataType": "analog",
         "unit": 1,
+        "minChange": 1,
+        "blockingTime": 10,
+        "maxInterval": 5,
         "x": 350,
         "y": 200
     }

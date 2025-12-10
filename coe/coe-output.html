@@ -15,7 +15,10 @@
             nodeNumber: { value: 1, validate: RED.validators.number() },
             outputNumber: { value: 1, validate: RED.validators.number() },
             dataType: { value: "analog" },
-            unit: { value: 0, validate: RED.validators.number() }
+            unit: { value: 0, validate: RED.validators.number() },
+            minChange: { value: 1, validate: RED.validators.number() },
+            blockingTime: { value: 10, validate: RED.validators.number() },
+            maxInterval: { value: 5, validate: RED.validators.number() }
         },
         inputs: 1,
         outputs: 2,
@@ -56,11 +59,13 @@
                     RED.notify("Error loading unit list from unit-config.js.", "error");
                 });
             
-            $("#node-input-dataType").change(function() {
+            $("#node-input-dataType").change(function() { // Show unit & minChange row
                 if ($(this).val() === "analog") {
                     $("#unit-row").show();
+                    $("#minchange-row").show();
                 } else {
                     $("#unit-row").hide();
+                    $("#minchange-row").hide();
                 }
             });
             $("#node-input-dataType").change();
@@ -95,5 +100,20 @@
     <div class="form-row" id="unit-row" style="display:none;">
         <label for="node-input-unit"><i class="fa fa-ruler"></i> <span data-i18n="coe-output.label.unit"></span></label>
         <select id="node-input-unit"></select>
+    </div>
+    <div class="form-row">
+    <label><strong style="font-size: 1.2em; margin-top:15px; display:block;"><span data-i18n="coe-output.label.sendCondition"></span></strong></label>
+    </div>
+    <div class="form-row" id="minchange-row" style="display:none;">
+        <label for="node-input-minChange"><i class="fa fa-line-chart"></i> <span data-i18n="coe-output.label.minChange"></span></label>
+        <input type="number" id="node-input-minChange" placeholder="" min="0" max="10000000000">
+    </div>
+    <div class="form-row">
+        <label for="node-input-blockingTime"><i class="fa fa-clock-o"></i> <span data-i18n="coe-output.label.blockingTime"></span></label>
+        <input type="number" id="node-input-blockingTime" placeholder="10" min="1" max="999">
+    </div>
+    <div class="form-row">
+        <label for="node-input-maxInterval"><i class="fa fa-repeat"></i> <span data-i18n="coe-output.label.maxInterval"></span></label>
+        <input type="number" id="node-input-maxInterval" placeholder="5" min="1" max="60">
     </div>
 </script>
