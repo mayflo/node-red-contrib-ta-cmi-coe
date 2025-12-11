@@ -2,7 +2,7 @@
     "coe-monitor": {
         "label": {
             "name": "Name",
-            "cmiconfig": "CMI Config",
+            "cmiconfig": "CMI",
             "filterNodeNumber": "Filter Node",
             "filterDataType": "Filter Type",
             "includeRaw": "Include Raw Data",
@@ -12,8 +12,7 @@
             "filterNodeNumber": "0 = all"
         },
         "status": {
-            "monitoring": "Monitoring...",
-            "idle": "Idle",
+            "monitoring": "Monitoring",
             "node": "Node"
         }
     }

@@ -2,23 +2,23 @@
     "coe-output": {
         "label": {
             "name": "Name",
-            "cmiconfig": "CMI Config",
+            "cmiconfig": "CMI",
             "nodeNumber": "Node",
             "outputNumber": "Output",
             "dataType": "Data Type",
             "unit": "Unit",
-            "sendConditions": "Sending Conditions",
+            "sendConditions": "Sending Conditions:",
             "minChange": "If change >",
-            "blockingTime": "Blocking Time",
-            "maxInterval": "Interval Time"
+            "blockingTime": "Blocking Time (Sec)",
+            "maxInterval": "Interval Time (Min)"
         },
         "status": {
             "noconfig": "No config",
             "queued": "queued",
-            "ready": "ready",
-            "merged": "sent (merged)",
-            "retransmit": "retransmit",
-            "suppressed": "suppressed"
+            "ready": "Ready",
+            "merged": "Sent",
+            "retransmit": "Resent",
+            "blocked": "Blocked"
         }
     }
 }

@@ -13,6 +13,7 @@ module.exports = function(RED) {
     function CoEMonitorNode(config) {
         RED.nodes.createNode(this, config);
         const node = this;
+        node._ = RED._;
         
         node.cmiConfig = RED.nodes.getNode(config.cmiconfig);
 
@@ -109,13 +110,13 @@ module.exports = function(RED) {
                 node.status({
                     fill: "green", 
                     shape: "dot", 
-                    text: RED._("coe-monitor.status.node") + ` ${block.nodeNumber} B${block.blockNumber}[${dataTypeLabel}] - ${packetCount} Pkts`
+                    text: node._("coe-monitor.status.node") + ` ${block.nodeNumber} B${block.blockNumber}[${dataTypeLabel}] - ${packetCount} Pkts`
                 });
             }
         };
 
         node.cmiConfig.registerListener(listener);
-        node.status({fill: "grey", shape: "ring", text: "coe-monitor.status.monitoring"});
+        node.status({fill: "grey", shape: "ring", text: node._("coe-monitor.status.monitoring") + "..."});
 
         // Status Update Timer (shows last activity)
         const statusTimer = setInterval(() => {
@@ -124,7 +125,7 @@ module.exports = function(RED) {
                 node.status({
                     fill: "yellow", 
                     shape: "ring", 
-                    text: RED._("coe-monitor.status.idle") + ` ${secsSinceUpdate}s - ${packetCount} Pkts [v${coeVersion}]`
+                    text: node._("coe-monitor.status.monitoring") + ` ${secsSinceUpdate}s - ${packetCount} Pkt. [v${coeVersion}]`
                 });
             }
         }, 5000);

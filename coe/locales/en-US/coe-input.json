@@ -2,7 +2,7 @@
     "coe-input": {
         "label": {
             "name": "Name",
-            "cmiconfig": "CMI Config",
+            "cmiconfig": "CMI",
             "nodeNumber": "Node",
             "outputNumber": "Input",
             "dataType": "Data Type",

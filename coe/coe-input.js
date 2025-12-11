@@ -81,7 +81,7 @@ module.exports = function(RED) {
                     unit = mergedBlock.units ? mergedBlock.units[block.position] : null;
                 } else {
                     value = mergedBlock.values[block.position] ? true : false;
-                    unit = null;
+                    unit = mergedBlock.units ? mergedBlock.units[block.position] : null;
                 }
                 
                 // Build message

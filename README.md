@@ -1,6 +1,6 @@
 # node-red-contrib-ta-cmi-coe
 
-[🇩🇪 Deutsch](README.de.md)
+[🇩🇪 README Deutsche Version](README.de.md)
 
 [![Platform][platform-shield]][platform-link] [![Release][release-shield]][release-link] [![Downloads][downloads-shield]][downloads-link] [![CommitDate][date-shield]][date-link] [![License][license-shield]][license-link] [![Languages][languages-shield]][languages-link]
 
@@ -137,25 +137,25 @@ msg.coe = { unit: 1 };  // Overrides config
 
 ## Troubleshooting
 
-### Not receiving any data?
+### Not receiving any data
 
-1. **Check CMI CoE outputs**: Are the IP address and port correct?
+1. **Check CMI CoE outputs**: Check if IP address and port are correct
 2. **Local IP**: Try the maximum receive range with Local IP = 0.0.0.0 (all) (especially for Docker environments)
-3. **Firewall**: Are ports 5441/UDP (CoE V1) or 5442/UDP (CoE V2) open in the firewall?
-4. **Node Number**: Does it match the CMI configuration?
-5. **Enable Debug**: Activate "Receive All" and check the debug output.
+3. **Firewall**: Check if ports 5441/UDP (CoE V1) or 5442/UDP (CoE V2) are open in the firewall
+4. **Node Number**: Check if it matches the CMI configuration
+5. **Enable Debug**: Activate "Receive All" and check the debug output
 
-### Sending not working?
+### Sending not working
 
-1. **Is the CMI reachable?** Ping the CMI IP address.
-2. **CAN input on controller**: Are the node number and output number correct?
-3. **Timeout on controller?** Use the "Send all outputs" interval.
+1. **Is the CMI reachable?** Ping the CMI IP address
+2. **CAN input on controller**: Check if node number and output number are correct
+3. **Timeout on controller?** Use the "Send all outputs" interval
 
-### Multiple CMIs?
+### Multiple CMIs
 
 - Different node numbers must be used.
 
-### Incorrect values?
+### Incorrect values
 
 - **Values ​​too large**: CAN bus V1 is limited to ±32,767 (dimensionless)
 - **Incorrect unit**: Some units (working number, Euro) have limitations

@@ -19,7 +19,14 @@ module.exports = function(RED) {
         RED.nodes.createNode(this, config);
         const node = this;
     
-        node.lang = (RED.settings.lang.toLowerCase().startsWith("de")) ? "de" : "en";
+        let langSetting = (RED.settings.lang || "").toLowerCase();
+        switch (true) {
+        case langSetting.startsWith("de"):
+            node.lang = "de";
+            break;
+        default:
+            node.lang = "en";
+        }
 
         node.address = config.address || '192.168.0.100';
         node.coeVersion = parseInt(config.coeVersion) || 1;

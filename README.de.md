@@ -1,6 +1,6 @@
 # node-red-contrib-ta-cmi-coe
 
-[🇬🇧 English](README.md)
+[🇬🇧 README English Version](README.md)
 
 [![Platform][platform-shield]][platform-link] [![Release][release-shield]][release-link] [![Downloads][downloads-shield]][downloads-link] [![CommitDate][date-shield]][date-link] [![License][license-shield]][license-link] [![Languages][languages-shield]][languages-link]
 
@@ -138,25 +138,25 @@ msg.coe = { unit: 1 };  // Überschreibt Config
 
 ## Troubleshooting
 
-### Keine Daten empfangen?
+### Keine Daten empfangen
 
-1. **CMI CoE-Ausgänge prüfen**: Sind IP und Port korrekt?
-2. **Lokale IP**: den max. Empfangsbereich mit Lokale IP = 0.0.0.0 (alle) probieren (insbesondere für Docker-Umgebungen)
-3. **Firewall**: sind in der Firewall Port 5441/UDP (CoE V1) bzw. 5442/UDP (CoE V2) geöffnet?
-4. **Node Number**: stimmt mit CMI-Konfiguration überein?
+1. **CMI CoE-Ausgänge prüfen**: Prüfe ob IP und Port korrekt sind
+2. **Lokale IP**: Den max. Empfangsbereich mit Lokale IP = 0.0.0.0 (alle) probieren (insbesondere für Docker-Umgebungen)
+3. **Firewall**: Prüfe ob in der Firewall Port 5441/UDP (CoE V1) bzw. 5442/UDP (CoE V2) geöffnet sind
+4. **Node Number**: Prüfe ob mit CMI-Konfiguration übereinstimmend
 5. **Debug aktivieren**: "Receive All" aktivieren und Debug-Output prüfen
 
-### Senden funktioniert nicht?
+### Senden funktioniert nicht
 
 1. **CMI erreichbar?** Ping zur CMI IP
-2. **CAN-Eingang auf Regler**: sind Knoten-Nr und Ausgangsnr korrekt?
+2. **CAN-Eingang auf Regler**: Prüfe ob Knoten-Nr und Ausgangsnr korrekt sind
 3. **Timeout auf Regler?** "Sende Ausgänge alle" Intervall nutzen
 
-### Mehrere CMIs?
+### Mehrere CMIs
 
 - Es müssen unterschiedliche Knoten-Nummern verwendet werden.
 
-### Werte falsch?
+### Werte falsch
 
 - **Zu große Werte**: CAN-Bus V1 ist limitiert auf ±32.767 (dimensionslos)
 - **Falsche Unit**: Manche Einheiten (Arbeitszahl, Euro) haben Einschränkungen
@@ -196,7 +196,6 @@ Basiert auf dem Protokoll-Verständnis und der Dokumentation von:
 ## Support
 
 - **Issues**: [GitHub Issue Tracker](https://github.com/mayflo/node-red-contrib-ta-cmi-coe/issues)
-- 
 - **Dokumentation**: Siehe README
 
 ## Author

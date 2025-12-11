@@ -36,39 +36,58 @@
             const langString = RED.i18n.detectLanguage() || 'en';
             const editorLanguage = (langString.toLowerCase().startsWith("de")) ? "de" : "en";
 
-            // Populate unit dropdown
-            $.getJSON('ta-cmi-coe/units/' + editorLanguage)
-                .done(function(unitsData) {               
-                    const selectElement = $('#node-input-unit');
-                    selectElement.empty(); 
+            function loadAndFilterUnits(dataType) {
+                const requiredType = dataType === 'analog' ? 0 : 1;
 
-                    Object.keys(unitsData).forEach(function(key) {
-                        const unit = unitsData[key];
-                        selectElement.append(
-                            $('<option></option>')
-                                .attr('value', key)
-                                .text(unit.name)
-                        );
+                $.getJSON('ta-cmi-coe/units/' + editorLanguage)
+                    .done(function(unitsData) {               
+                        const selectElement = $('#node-input-unit');
+                        selectElement.empty(); 
+                        let foundUnit = false;
+
+                        Object.keys(unitsData).forEach(function(key) {
+                            const unit = unitsData[key];
+                            
+                            if (unit.type === requiredType) { 
+                                selectElement.append(
+                                    $('<option></option>')
+                                        .attr('value', key)
+                                        .text(unit.name)
+                                );
+                                if (Number(key) === Number(node.unit)) {
+                                    foundUnit = true;
+                                }
+                            }
+                        });
+
+                        if (!foundUnit) {
+                            node.unit = selectElement.find('option:first').attr('value') || 0;
+                        }
+
+                        selectElement.val(node.unit);
+                    })
+                    .fail(function(jqXHR, textStatus, errorThrown) {
+                        console.error("Error loading unit list:", errorThrown);
+                        RED.notify("Error loading unit list from unit-config.js.", "error");
                     });
-
-                    // Set existing value
-                    selectElement.val(node.unit);
-                })
-                .fail(function(jqXHR, textStatus, errorThrown) {
-                    console.error("Error loading unit list:", errorThrown);
-                    RED.notify("Error loading unit list from unit-config.js.", "error");
-                });
+            }
             
-            $("#node-input-dataType").change(function() { // Show unit & minChange row
-                if ($(this).val() === "analog") {
-                    $("#unit-row").show();
+            $("#node-input-dataType").change(function() { 
+                const selectedDataType = $(this).val();
+                loadAndFilterUnits(selectedDataType);
+
+                if (selectedDataType === "analog") {
                     $("#minchange-row").show();
                 } else {
-                    $("#unit-row").hide();
                     $("#minchange-row").hide();
                 }
             });
-            $("#node-input-dataType").change();
+            
+            $("#node-input-dataType").change(); 
+
+            $("#node-input-minChange").val(
+                parseFloat($("#node-input-minChange").val() || 0).toFixed(5)
+            );
         }
     });
 </script>
@@ -97,16 +116,16 @@
             <option value="digital">Digital</span></option>
         </select>
     </div>
-    <div class="form-row" id="unit-row" style="display:none;">
-        <label for="node-input-unit"><i class="fa fa-ruler"></i> <span data-i18n="coe-output.label.unit"></span></label>
+    <div class="form-row">
+        <label for="node-input-unit"><i class="fa fa-thermometer-full"></i> <span data-i18n="coe-output.label.unit"></span></label>
         <select id="node-input-unit"></select>
     </div>
     <div class="form-row">
-    <label><strong style="font-size: 1.2em; margin-top:15px; display:block;"><span data-i18n="coe-output.label.sendCondition"></span></strong></label>
+        <span data-i18n="coe-output.label.sendConditions"></span>
     </div>
     <div class="form-row" id="minchange-row" style="display:none;">
         <label for="node-input-minChange"><i class="fa fa-line-chart"></i> <span data-i18n="coe-output.label.minChange"></span></label>
-        <input type="number" id="node-input-minChange" placeholder="" min="0" max="10000000000">
+        <input type="number" id="node-input-minChange" placeholder="1" min="0" max="1000000" step="0.001">
     </div>
     <div class="form-row">
         <label for="node-input-blockingTime"><i class="fa fa-clock-o"></i> <span data-i18n="coe-output.label.blockingTime"></span></label>

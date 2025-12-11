@@ -2,23 +2,23 @@
     "coe-output": {
         "label": {
             "name": "Name",
-            "cmiconfig": "CMI Konfig",
+            "cmiconfig": "CMI",
             "nodeNumber": "Knoten",
             "outputNumber": "Ausgang",
             "dataType": "Datentyp",
             "unit": "Einheit",
-            "sendConditions": "Sendebedingungen",
+            "sendConditions": "Sendebedingungen:",
             "minChange": "bei Änderung >",
-            "blockingTime": "Blockierzeit",
-            "maxInterval": "Intervallzeit"
+            "blockingTime": "Blockierzeit (Sek)",
+            "maxInterval": "Intervallzeit (Min)"
         },
         "status": {
             "noconfig": "Nicht konfiguriert",
-            "queued": "wartet",
-            "ready": "bereit",
-            "merged": "gesendet (Paket)",
-            "retransmit": "wartet (update)",
-            "suppressed": "unterdrückt"
+            "queued": "Wartet",
+            "ready": "Bereit",
+            "merged": "Gesendet",
+            "retransmit": "Erneut gesendet",
+            "blocked": "Blockiert"
         }
     }
 }
