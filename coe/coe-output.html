@@ -37,7 +37,7 @@
             const editorLanguage = (langString.toLowerCase().startsWith("de")) ? "de" : "en";
 
             function loadAndFilterUnits(dataType) {
-                const requiredType = dataType === 'analog' ? 0 : 1;
+                const isDigital = dataType === 'analog' ? false : true;
 
                 $.getJSON('ta-cmi-coe/units/' + editorLanguage)
                     .done(function(unitsData) {               
@@ -48,7 +48,7 @@
                         Object.keys(unitsData).forEach(function(key) {
                             const unit = unitsData[key];
                             
-                            if (unit.type === requiredType) { 
+                            if (unit.digital === isDigital) { 
                                 selectElement.append(
                                     $('<option></option>')
                                         .attr('value', key)

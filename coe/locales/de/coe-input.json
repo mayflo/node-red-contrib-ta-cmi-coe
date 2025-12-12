@@ -13,7 +13,13 @@
         },
         "status": {
             "waiting": "wartet",
-            "waitingAny": "wartet (alle Knoten)"
+            "waitingAny": "wartet (alle Knoten)",
+            "open": "Offen",
+            "closed": "Geschlossen",
+            "on": "Ein",
+            "off": "Aus",
+            "yes": "Ja",
+            "no": "Nein"
         }
     }
 }

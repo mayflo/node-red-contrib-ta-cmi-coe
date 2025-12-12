@@ -73,7 +73,7 @@ module.exports = function(RED) {
                 node.blockingTimer = null;
             }
 
-            setIntervalTimer(); // Restart watchdog
+            setIntervalTimer(); // Restart interval timer
 
             queueAndSend(node);
             node.lastSentValue = node.lastReceivedValue;
@@ -108,7 +108,7 @@ module.exports = function(RED) {
 
             const checkInterval = node.maxInterval * 60 * 1000;
             
-            node.intervalTimer = setTimeout(() => { // Sobald der Intervall abgelaufen ist, 
+            node.intervalTimer = setTimeout(() => { // Interval elapsed, retransmit last value
                 const now = Date.now();
                 const timeSinceLastSend = (now - node.lastSentTime) / 1000 / 60;
                 
@@ -124,10 +124,10 @@ module.exports = function(RED) {
                     });
                 }     
                 setTimeout(() => {
-                    node.status({fill: "grey", shape: "ring", text: `${readyText} [v${coeVersion}]`});
+                    node.status({fill: "grey", shape: "ring", text: node._("coe-output.status.ready") + ` [v${node.coeVersion}]`});
                 }, 5000);
                 
-                setIntervalTimer(); // Restart watchdog for next check
+                setIntervalTimer(); // Restart interval timer
             }, checkInterval);
 
         }
@@ -157,7 +157,7 @@ module.exports = function(RED) {
         }
     }
     
-    // Check if message should be suppressed based on sending conditions
+    // Checks if message should be suppressed based on sending conditions
     function checkSuppressCondition(node, timeSinceLastSend) {
         let isSuppressed = 0;
         let blockReason = "";

@@ -110,7 +110,7 @@ module.exports = function(RED) {
                 node.status({
                     fill: "green", 
                     shape: "dot", 
-                    text: node._("coe-monitor.status.node") + ` ${block.nodeNumber} B${block.blockNumber}[${dataTypeLabel}] - ${packetCount} Pkts`
+                    text: node._("coe-monitor.status.node") + ` ${block.nodeNumber} ${dataTypeLabel}/${block.blockNumber} - ${packetCount} Pkts`
                 });
             }
         };

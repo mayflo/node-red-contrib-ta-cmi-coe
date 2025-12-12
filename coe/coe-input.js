@@ -14,6 +14,7 @@ module.exports = function(RED) {
     function CoEInputNode(config) {
         RED.nodes.createNode(this, config);
         const node = this;
+        node._ = RED._;
         
         node.cmiConfig = RED.nodes.getNode(config.cmiconfig);
     
@@ -74,16 +75,18 @@ module.exports = function(RED) {
                 const mergedBlock = mergeBlockData(currentState, incomingBlock);
                 node.blockState[blockKey] = mergedBlock;
                 
-                // Extract Values from merged block                
-                let value, unit; 
+                // Extract Values, Units from merged block                
+                let value, unit, state; 
                 if (node.dataType === 'analog') {
                     value = mergedBlock.values[block.position];
                     unit = mergedBlock.units ? mergedBlock.units[block.position] : null;
+                    state = value;
                 } else {
                     value = mergedBlock.values[block.position] ? true : false;
                     unit = mergedBlock.units ? mergedBlock.units[block.position] : null;
+                    state = node._(getDigitalState(unit, value));
                 }
-                
+
                 // Build message
                 const unitInfo = getUnitInfo(unit, node.lang);
                 const msg = {
@@ -96,6 +99,7 @@ module.exports = function(RED) {
                         dataType: node.dataType,
                         version: data.version,
                         unit: unit,
+                        state: state,
                         unitName: unitInfo.name,
                         unitSymbol: unitInfo.symbol,
                         sourceIP: data.sourceIP,
@@ -108,7 +112,7 @@ module.exports = function(RED) {
                      node.send(msg);
                 }
                 
-                currentNodeText = `${value} ${unitInfo.symbol || ''} [v${node.coeVersion}]` // Caching last Node text
+                currentNodeText = `${state} ${unitInfo.symbol || ''} [v${node.coeVersion}]` // Caching last Node text
 
                 node.status({
                     fill: "green", 
@@ -143,7 +147,21 @@ module.exports = function(RED) {
         node.on('close', function() {
             node.cmiConfig.unregisterListener(listener);
         });
-    }
     
+        function getDigitalState(unit, value) {
+            const unitKey = "coe-input.status.";
+            switch (unit) {
+                    case 43:
+                        return unitKey + (value ? "on" : "off");
+                    case 44:
+                        return unitKey + (value ? "yes" : "no");
+                    case 78:
+                        return unitKey + (value ? "open" : "closed");
+                    default:
+                        return unitKey + (value ? "on" : "off");
+                }
+        }
+    }
+
     RED.nodes.registerType("coe-input", CoEInputNode);
 };

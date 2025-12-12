@@ -27,7 +27,7 @@ module.exports = function(RED) {
                 name: lang === "de" ? unit.name_de : unit.name_en,
                 symb: lang === "de" ? unit.symb_de : unit.symb_en,
                 decimals: unit.decimals,
-                type: unit.type
+                digital: unit.digital ? true : false
             };
         });
 
