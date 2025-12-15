@@ -9,7 +9,7 @@
 module.exports = function(RED) {
     "use strict";
     const dgram = require('dgram');
-    const { parseCoEPacket } = require('../lib/coe');
+    const { parsePacket } = require('../lib/protocol');
 
     // CoE Protocol Ports
     const COE_PORT1 = 5441; // CoE v1
@@ -43,7 +43,7 @@ module.exports = function(RED) {
             });
             
             node.socket.on('message', (msg, rinfo) => {
-                const blocks = parseCoEPacket(msg, node.coeVersion);
+                const blocks = parsePacket[node.coeVersion](msg);
                 
                 if (blocks && blocks.length > 0) {
                     const data = { // Wrapper object for meta info
