@@ -89,7 +89,7 @@ Auf der CMI unter **Einstellungen → Ausgänge → CoE**:
 - **IP**: IP-Adresse von Node-RED
 - **Knoten**: Wert aus "Node Number" des Input Nodes
 - **Netzwerkausgang**: Nummer des Ausgangs (1-32)
-- **Sendebedingung**: nach Bedarf
+- **Sendebedingungen**: Blockade kleiner & häufiger Änderungen, Intervall für wiederholtes Senden (nach Bedarf)
 
 #### Für Senden an CMI (CoE Output):
 Auf dem Regler: CAN-Eingang konfigurieren
@@ -109,15 +109,16 @@ Empfängt Werte von der CMI.
     payload: 22.5,                    // Der Wert
     topic: "coe/10/analog/1",         // Format: coe/{node}/{type}/{output}
     coe: {
+        timestamp: 2026-01-08T        // Eingangszeit
+        sourceIP: "192.168.1.100",    // IP der CMI
         nodeNumber: 10,               // CAN Knoten-Nummer
-        blockNumber: 1,               // CoE Block-Nummer
+        dataType: "analog",           // Datentyp
+        blockNumber: 1,               // CoE Block-Nummer (nur V1)
         outputNumber: 1,              // Netzwerkausgang
-        dataType: "analog",           // Typ
+        state: 22.5,                  // Wert oder digitaler Zustand
         unit: 1,                      // Unit ID (z.B. 1 = °C)
         unitName: "Temperatur °C",    // Unit Name
-        unitSymbol: "°C°",            // Unit Symbol
-        sourceIP: "192.168.1.100",    // IP der CMI
-        raw: { ... }                  // Rohdaten
+        unitSymbol: "°C°"            // Unit Symbol
     }
 }
 ```

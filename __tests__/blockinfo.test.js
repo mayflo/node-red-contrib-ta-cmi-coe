@@ -2,7 +2,7 @@ const { getBlockInfo } = require("../lib/utils");
 
 describe("Block Info Tests", () => {
   test("Analog Output 1 → Block 1, Position 0 (V1)", () => {
-    expect(getBlockInfo("analog", 0, 1)).toEqual({ number: 1, position: 0 });
+    expect(getBlockInfo("analog", 1)).toEqual({ number: 1, position: 0 });
   });
 
   test("Analog Output 5 → Block 2, Position 0 (V1)", () => {

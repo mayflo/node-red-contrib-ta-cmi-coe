@@ -88,7 +88,7 @@ On the CMI under **Settings → Outputs → CoE**:
 - **IP**: IP address of Node-RED
 - **Node**: Value from the "Node Number" of the input node
 - **Network Output**: Number of the output (1-32)
-- **Transmit Condition**: As required
+- **Sending Conditions**: Blocking of small & frequent changes, intervall for repeated sending (as required)
 
 #### For sending to the CMI (CoE Output):
 On the controller: Configure the CAN input
@@ -108,15 +108,16 @@ Receives values ​​from the CMI.
     payload: 22.5,                    // The value
     topic: "coe/10/analog/1",         // Format: coe/{node}/{type}/{output}
     coe: {
+        timestamp: 2026-01-08T        // Reception Time
+        sourceIP: "192.168.1.100",    // IP of the CMI
         nodeNumber: 10,               // CAN Node Number
-        blockNumber: 1,               // CoE Block Number
+        dataType: "analog",           // Data Type
+        blockNumber: 1,               // CoE Block Number (only V1)
         outputNumber: 1,              // Network Output
-        dataType: "analog",           // Type
+        state: 22.5,                  // Value or Digital State
         unit: 1,                      // Unit ID (z.B. 1 = °C)
         unitName: "Temperature °C",   // Unit name
         unitSymbol: "°C°",            // Unit symbol
-        sourceIP: "192.168.1.100",    // IP of the CMI
-        raw: { ... }                  // Raw datta
     }
 }
 ```
