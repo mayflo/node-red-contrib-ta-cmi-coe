@@ -8,7 +8,7 @@
 
 module.exports = function(RED) {
     'use strict';
-    const { getUnitInfo } = require('../lib/utils')
+    const { getUnitInfo, getDigitalStateKey } = require('../lib/utils')
 
     function CoEMonitorNode(config) {
         RED.nodes.createNode(this, config);
@@ -32,22 +32,22 @@ module.exports = function(RED) {
         let packetCount = 0;
         let lastUpdate = Date.now();
 
-        const listener = (data) => { // Listener for incoming data
-            if (!data || !data.blocks || !Array.isArray(data.blocks)) {
+        const listener = (received) => { // Listener for incoming data
+            if (!received || !received.data || !Array.isArray(received.data)) {
                 node.warn('Received invalid data format');
                 return;
             }
 
-            for (let block of data.blocks) {
-                if (!block) continue;
+            for (let canNode of received.data) {
+                if (!canNode) continue;
 
                 if (node.filterNodeNumber !== null && // Filter by Node Number
                     node.filterNodeNumber !== 0 && 
-                    block.nodeNumber !== node.filterNodeNumber) {
+                    canNode.nodeNumber !== node.filterNodeNumber) {
                     continue;
                 }
                 
-                const isDigital = (block.blockNumber === 0 || block.blockNumber === 9); // Filter by Data Type
+                const isDigital = (canNode.dataType === 'digital'); // Filter by Data Type
                 const isAnalog = !isDigital;
                 
                 if (node.filterDataType === 'analog' && !isAnalog) continue;
@@ -59,48 +59,38 @@ module.exports = function(RED) {
                 // Build message
                 const msg = {
                     payload: {
-                        nodeNumber: block.nodeNumber,
-                        blockNumber: block.blockNumber,
-                        dataType: isDigital ? 'digital' : 'analog',
-                        values: block.values,
-                        units: block.units,
-                        sourceIP: data.sourceIP,
-                        version: data.version,
                         timestamp: new Date().toISOString(),
-                        rawBuffer: data.rawBuffer ? data.rawBuffer.toString('hex').toUpperCase() : null
+                        sourceIP: received.sourceIP,
+                        version: received.version,
+                        nodeNumber: canNode.nodeNumber,
+                        ...(canNode.blockNumber && { blockNumber: canNode.blockNumber}),
+                        dataType: canNode.dataType
                     },
-                    topic: `coe/monitor/${block.nodeNumber}/block/${block.blockNumber}`
+                    topic: `coe/monitor/${canNode.nodeNumber}/block/${canNode.dataType}`
                 };
                 
-                // Additional Details for Analog Blocks
-                if (isAnalog && block.units) {
-                    msg.payload.valuesDetailed = block.values.map((value, idx) => {
-                        const unitInfo = getUnitInfo(block.units[idx], lang);
-                        RED.log.debug(`Unit Info for unit ${block.units[idx]}: ${JSON.stringify(unitInfo)} + version: ${coeVersion} + key: ${unitInfo.key} + symbol: ${unitInfo.symbol}`);
-                        const outputNumber = (block.blockNumber - 1) * 4 + idx + 1;
-                        return {
-                            outputNumber: outputNumber,
-                            value: value,
-                            unit: block.units[idx],
+                // Additional Details for Digital/Analog Blocks
+                const valuesDetailed = {};
+
+                if (canNode.outputs) {
+                    Object.entries(canNode.outputs).forEach(([outputNumber, output]) => {
+                        const unitInfo = getUnitInfo(output.unit, lang);
+                        const translationKey = getDigitalStateKey(output.unit, output.value, "coe-monitor.status.");
+
+                        valuesDetailed[outputNumber] = {
+                            value: output.value,
+                            ...(isDigital && { state: node._(translationKey) }),
+                            unit: output.unit,
                             unitName: unitInfo.name,
-                            unitSymbol: unitInfo.symbol
+                            ...(isAnalog && { unitSymbol: unitInfo.symbol })
                         };
                     });
-                }
-                
-                // Additional Details for Digital Blocks
-                if (isDigital) {
-                    const baseOutput = block.blockNumber === 0 ? 1 : 17;
-                    msg.payload.valuesDetailed = block.values.map((value, idx) => ({
-                        outputNumber: baseOutput + idx,
-                        value: value === 1,
-                        state: value === 1 ? 'ON' : 'OFF'
-                    }));
+                    msg.payload.values = valuesDetailed;
                 }
                 
                 // Raw Data
                 if (node.includeRaw) {
-                    msg.payload.raw = block;
+                    msg.payload.raw = { raw: received.rawBuffer ? received.rawBuffer.toString('hex').toUpperCase() : null}
                 }
                 
                 node.send(msg);
@@ -110,7 +100,7 @@ module.exports = function(RED) {
                 node.status({
                     fill: "green", 
                     shape: "dot", 
-                    text: node._("coe-monitor.status.node") + ` ${block.nodeNumber} ${dataTypeLabel}/${block.blockNumber} - ${packetCount} Pkts`
+                    text: node._("coe-monitor.status.node") + ` ${canNode.nodeNumber} ${dataTypeLabel} - ${packetCount} Pkts`
                 });
             }
         };

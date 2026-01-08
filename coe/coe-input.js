@@ -8,7 +8,7 @@
 
 module.exports = function(RED) {
     'use strict';
-    const { getBlockInfo, getUnitInfo, mergeBlockData, createEmptyState } = require('../lib/utils');
+    const { getUnitInfo, getDigitalStateKey, mergeNodeData, createEmptyState } = require('../lib/utils');
 
     // CoE Input Node (receiving values)
     function CoEInputNode(config) {
@@ -31,10 +31,7 @@ module.exports = function(RED) {
         node.dataType = config.dataType || 'analog';
    
         // State management for LKGVs (Last Known Good Values) per block
-        node.blockState = {};
-        
-        // Calculate block & position
-        const block = getBlockInfo(node.dataType, node.nodeNumber, node.outputNumber);
+        node.canNodeState = {};
 
         // Set Timer for CoE timeout
         const timeoutMs = (config.timeout || 20) * 60 * 1000; // Timeout in milliseconds
@@ -42,69 +39,69 @@ module.exports = function(RED) {
         let currentNodeText = "";
         
         // Listener for incoming data
-        const listener = (data) => {
-            // Data is now: { blocks, sourceIP, version, timestamp }
-            if (!data || !data.blocks || !Array.isArray(data.blocks)) {
+        const listener = (received) => {
+            // Data is now: { data, sourceIP, version, timestamp }
+            if (!received || !received.data || !Array.isArray(received.data)) {
                 node.warn('Received invalid data format');
                 return;
             }
             
             let foundMatchingBlock = false;
 
-            for (let incomingBlock of data.blocks) {
-                if (!incomingBlock) continue;
+            for (let canNode of received.data) {
+                if (!canNode) continue;
                 
-                const blockKey = `${incomingBlock.nodeNumber}-${incomingBlock.blockNumber}`;
+                const nodeKey = `${canNode.nodeNumber}-${canNode.dataType}`;
 
                 // Filter Node number (if > 0)
-                if (node.nodeNumber > 0 && incomingBlock.nodeNumber !== node.nodeNumber) {
+                if (node.nodeNumber > 0 && canNode.nodeNumber !== node.nodeNumber) {
                     continue;
                 }
                 
-                // Filter Block number
-                if (incomingBlock.blockNumber !== block.number) {
+                // Filter dataType number
+                if (canNode.dataType !== node.dataType) {
                     continue;
                 }
                 
                 // Merge blocks
-                let currentState = node.blockState[blockKey];
+                let currentState = node.canNodeState[nodeKey];
                 if (!currentState) {
-                    currentState = createEmptyState(incomingBlock);
+                    currentState = createEmptyState(canNode);
                 }
                 
-                const mergedBlock = mergeBlockData(currentState, incomingBlock);
-                node.blockState[blockKey] = mergedBlock;
+                const mergedCanNode = mergeNodeData(currentState, canNode);
+                node.canNodeState[nodeKey] = mergedCanNode;
                 
                 // Extract Values, Units from merged block                
-                let value, unit, state; 
+                let value, unit, state;
+
                 if (node.dataType === 'analog') {
-                    value = mergedBlock.values[block.position];
-                    unit = mergedBlock.units ? mergedBlock.units[block.position] : null;
+                    value = mergedCanNode.outputs[node.outputNumber].value;
+                    unit = mergedCanNode.outputs[node.outputNumber].unit;
                     state = value;
                 } else {
-                    value = mergedBlock.values[block.position] ? true : false;
-                    unit = mergedBlock.units ? mergedBlock.units[block.position] : null;
-                    state = node._(getDigitalState(unit, value));
+                    value = mergedCanNode.outputs[node.outputNumber].value ? true : false;
+                    unit = mergedCanNode.outputs[node.outputNumber].unit;
+                    const translationKey = getDigitalStateKey(unit, value, "coe-input.status.");
+                    state = node._(translationKey);
                 }
 
                 // Build message
                 const unitInfo = getUnitInfo(unit, node.lang);
                 const msg = {
                     payload: value,
-                    topic: `coe/${node.nodeNumber || mergedBlock.nodeNumber}/${node.dataType}/${node.outputNumber}`,
+                    topic: `coe/${node.nodeNumber || mergedCanNode.nodeNumber}/${node.dataType}/${node.outputNumber}`,
                     coe: {
-                        nodeNumber: mergedBlock.nodeNumber,
-                        blockNumber: mergedBlock.blockNumber,
-                        outputNumber: node.outputNumber,
+                        timestamp: received.timestamp,
+                        sourceIP: received.sourceIP,
+                        nodeNumber: mergedCanNode.nodeNumber,
                         dataType: node.dataType,
-                        version: data.version,
-                        unit: unit,
+                        outputNumber: node.outputNumber,
                         state: state,
+                        unit: unit,
                         unitName: unitInfo.name,
-                        unitSymbol: unitInfo.symbol,
-                        sourceIP: data.sourceIP,
-                        timestamp: data.timestamp,
-                        raw: mergedBlock
+                        unitSymbol: unitInfo.symbol
+                        // raw: received.rawBuffer ? received.rawBuffer.toString('hex').toUpperCase() : null
                     }
                 };
                 
@@ -147,20 +144,7 @@ module.exports = function(RED) {
         node.on('close', function() {
             node.cmiConfig.unregisterListener(listener);
         });
-    
-        function getDigitalState(unit, value) {
-            const unitKey = "coe-input.status.";
-            switch (unit) {
-                    case 43:
-                        return unitKey + (value ? "on" : "off");
-                    case 44:
-                        return unitKey + (value ? "yes" : "no");
-                    case 78:
-                        return unitKey + (value ? "open" : "closed");
-                    default:
-                        return unitKey + (value ? "on" : "off");
-                }
-        }
+
     }
 
     RED.nodes.registerType("coe-input", CoEInputNode);

@@ -13,7 +13,13 @@
         },
         "status": {
             "monitoring": "Monitoring",
-            "node": "Node"
+            "node": "Node",
+            "open": "Open",
+            "closed": "Closed",
+            "on": "On",
+            "off": "Off",
+            "yes": "Yes",
+            "no": "No"
         }
     }
 }

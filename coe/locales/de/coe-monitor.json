@@ -13,7 +13,13 @@
         },
         "status": {
             "monitoring": "Lauscht",
-            "node": "Knoten"
+            "node": "Knoten",
+            "open": "Offen",
+            "closed": "Geschlossen",
+            "on": "Ein",
+            "off": "Aus",
+            "yes": "Ja",
+            "no": "Nein"
         }
     }
 }

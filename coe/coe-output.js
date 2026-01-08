@@ -31,7 +31,12 @@ module.exports = function(RED) {
         node.dataType = config.dataType || 'analog';
         node.unit = parseInt(config.unit) || 0;
 
-        node.block = getBlockInfo(node.dataType, node.nodeNumber, node.outputNumber);
+        if (node.coeVersion === 2) {
+            node.queueKey = node.nodeNumber + '-' + node.dataType;
+        } else {
+            node.block = getBlockInfo(node.dataType, node.outputNumber);
+            node.queueKey = node.nodeNumber + '-' + node.block.number;
+        }
         
         // Filter configuration parameters
         node.minChange = parseFloat(config.minChange) || 1;

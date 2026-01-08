@@ -43,11 +43,11 @@ module.exports = function(RED) {
             });
             
             node.socket.on('message', (msg, rinfo) => {
-                const blocks = parsePacket[node.coeVersion](msg);
+                const data = parsePacket[node.coeVersion](msg);
                 
-                if (blocks && blocks.length > 0) {
-                    const data = { // Wrapper object for meta info
-                        blocks: blocks,
+                if (data && data.length > 0) {
+                    const received = { // Wrapper object for meta info
+                        data: data,
                         sourceIP: rinfo.address,
                         version: node.coeVersion,
                         timestamp: Date.now(),
@@ -56,7 +56,7 @@ module.exports = function(RED) {
 
                     node.listeners.forEach(listener => { // Notify all listeners
                         try {
-                            listener(data);
+                            listener(received);
                         } catch(err) {
                             node.error(`Listener error: ${err.message}`);
                         }
