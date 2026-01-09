@@ -1,0 +1,42 @@
+[
+    {
+        "id": "monitor_example",
+        "type": "coe-monitor",
+        "name": "CoE Monitor",
+        "cmiconfig": "mycmi",
+        "filterNodeNumber": 0,
+        "filterDataType": "all",
+        "includeRaw": false,
+        "x": 250,
+        "y": 100,
+        "wires": [
+            [
+                "monitor_debug"
+            ]
+        ]
+    },
+    {
+        "id": "monitor_debug",
+        "type": "debug",
+        "name": "Debug Monitor",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 450,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "mycmi",
+        "type": "cmiconfig",
+        "name": "My CMI",
+        "localip": "0.0.0.0",
+        "address": "192.168.0.100",
+        "coeVersion": 1
+    }
+]
