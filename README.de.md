@@ -14,7 +14,7 @@ Node-RED Bibliothek zum Lesen und Schreiben von Werten an Technische Alternative
 - Unterstützung für CoE-Version 1 & 2
 - Automatische Konvertierung analoger Werte basierend auf Unit ID
 - Unterstützung für von TA definierte Messgrößen
-- Konfiguration von CMI und CoE-Version
+- Einstellung von Sendebedingung und -intervall
 
 ---
 
@@ -85,11 +85,11 @@ Erstelle zunächst eine CMI Konfiguration:
 
 #### Für Empfang vom CMI (CoE Input):
 Auf der CMI unter **Einstellungen → Ausgänge → CoE**:
-- **Eingang**: CAN-Bus Eingang (z.B. CAN1)
+- **Eingang**: CAN-Bus Eingang (z.B. CAN 1)
 - **IP**: IP-Adresse von Node-RED
-- **Knoten**: Wert aus "Node Number" des Input Nodes
+- **Knoten**: Knoten-Nummer des Input Nodes
 - **Netzwerkausgang**: Nummer des Ausgangs (1-32)
-- **Sendebedingungen**: Blockade kleiner & häufiger Änderungen, Intervall für wiederholtes Senden (nach Bedarf)
+- **Sendebedingungen**: Unterdrückung kleiner & häufiger Änderungen, Intervall für wiederholtes Senden (nach Bedarf)
 
 #### Für Senden an CMI (CoE Output):
 Auf dem Regler: CAN-Eingang konfigurieren
@@ -165,7 +165,7 @@ msg.coe = { unit: 1 };  // Überschreibt Config
 
 ## Bekannte Einschränkungen
 
-1. **Max. Wertbereich**: CAN-Bus Version 1 ist limitiert auf ±32.767 (V2 für größeren Wertebereich)
+1. **Max. Wertbereich**: CAN-Bus Version 1 ist limitiert auf ±32.767 (V2 für größeren Wertebereich benutzen)
 2. **Keine Quittierung**: CoE hat keine Bestätigung (Fire-and-forget)
 3. **Das CMI funktioniert als Gateway**: Werte werden zwar vom CMI über CoE übertragen, können aber nicht direkt an CMI gesendet werden. Die Werte werden vom CMI an den CAN-Bus weitergeleitet und von den Reglern ausgelesen.
 

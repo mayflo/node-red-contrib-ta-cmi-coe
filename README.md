@@ -14,7 +14,7 @@ Node-RED library for reading and writing values ​​to Technische Alternative 
 - Support for CoE versions 1 & 2
 - Automatic conversion of analog values ​​based on Unit ID
 - Support for TA-defined measurement parameters
-- Configuration of CMI and CoE version
+- Configuration of sending condition & interval
 
 ---
 
@@ -84,11 +84,11 @@ First, create a CMI configuration:
 
 #### For receiving from the CMI (CoE Input):
 On the CMI under **Settings → Outputs → CoE**:
-- **Input**: CAN bus input (e.g., CAN1)
+- **Input**: CAN bus input (e.g., CAN 1)
 - **IP**: IP address of Node-RED
-- **Node**: Value from the "Node Number" of the input node
+- **Node**: Node Number of the input node
 - **Network Output**: Number of the output (1-32)
-- **Sending Conditions**: Blocking of small & frequent changes, intervall for repeated sending (as required)
+- **Sending Conditions**: Suppression of small & frequent changes, interval for repeated sending (as required)
 
 #### For sending to the CMI (CoE Output):
 On the controller: Configure the CAN input
@@ -164,7 +164,7 @@ msg.coe = { unit: 1 };  // Overrides config
 
 ## Known limitations
 
-1. **Max. value range**: CAN bus version 1 is limited to ±32,767 (V2 for a larger value range)
+1. **Max. value range**: CAN bus version 1 is limited to ±32,767 (use V2 for a larger value range)
 2. **No acknowledgment**: CoE does not provide confirmation (fire-and-forget)
 3. **The CMI functions as a gateway**: Values ​​are transmitted from the CMI via CoE, but cannot be sent directly to the CMI. The values ​​are forwarded from the CMI to the CAN bus and read by the controllers.
 
