@@ -1,6 +1,6 @@
 {
   "name": "node-red-contrib-ta-cmi-coe",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Node-RED nodes for TA CMI CoE (CAN over Ethernet)",
   "author": "Florian Mayrhofer",
   "license": "Apache-2.0",
@@ -33,13 +33,13 @@
     "node": ">=14.0.0"
   },
   "files": [
-      "coe/",
-      "examples/",
-      "lib/",
-      "CHANGELOG.md",
-      "LICENSE",
-      "README.de.md",
-      "README.md"
+    "coe/",
+    "examples/",
+    "lib/",
+    "CHANGELOG.md",
+    "LICENSE",
+    "README.de.md",
+    "README.md"
   ],
   "repository": {
     "type": "git",
