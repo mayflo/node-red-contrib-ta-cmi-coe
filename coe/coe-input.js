@@ -75,13 +75,19 @@ module.exports = function(RED) {
                 // Extract Values, Units from merged block                
                 let value, unit, state;
 
+                // Ensure the requested output exists in merged outputs
+                const output = mergedCanNode.outputs ? mergedCanNode.outputs[node.outputNumber] : undefined;
+                if (!output) {
+                    continue;
+                }
+
                 if (node.dataType === 'analog') {
-                    value = mergedCanNode.outputs[node.outputNumber].value;
-                    unit = mergedCanNode.outputs[node.outputNumber].unit;
+                    value = output.value;
+                    unit = output.unit;
                     state = value;
                 } else {
-                    value = mergedCanNode.outputs[node.outputNumber].value ? true : false;
-                    unit = mergedCanNode.outputs[node.outputNumber].unit;
+                    value = output.value ? true : false;
+                    unit = output.unit;
                     const translationKey = getDigitalStateKey(unit, value, "coe-input.status.");
                     state = node._(translationKey);
                 }

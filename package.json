@@ -16,7 +16,7 @@
     "automation"
   ],
   "node-red": {
-    "version": ">=1.0.0",
+    "version": ">=2.0.0",
     "nodes": {
       "coe-input": "coe/coe-input.js",
       "coe-output": "coe/coe-output.js",

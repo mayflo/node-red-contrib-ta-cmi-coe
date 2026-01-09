@@ -1,7 +1,7 @@
 ## Changelog
 
-### Version 1.1
- - Change to variable message size (CoE V2 approach)
+### Version 1.1.0
+ - Change to variable message size (similar to CoE V2 approach)
  - Added transmission conditions (output node)
 
 ### Version 1.0.2
