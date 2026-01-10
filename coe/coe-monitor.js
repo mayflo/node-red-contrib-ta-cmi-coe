@@ -8,7 +8,7 @@
 
 module.exports = function(RED) {
     'use strict';
-    const { getUnitInfo, getDigitalStateKey } = require('../lib/utils')
+    const { Validate, getUnitInfo, getDigitalStateKey } = require('../lib/utils')
 
     function CoEMonitorNode(config) {
         RED.nodes.createNode(this, config);
@@ -16,18 +16,22 @@ module.exports = function(RED) {
         node._ = RED._;
         
         node.cmiConfig = RED.nodes.getNode(config.cmiconfig);
-
-        const lang = node.cmiConfig.lang;
-        const coeVersion = node.cmiConfig.coeVersion || 1;
         
         if (!node.cmiConfig) {
-            node.error("CMI Configuration missing");
+            node.error("No CMI config assigned to CoE Monitor node.");
+            node.status({fill:"red", shape:"ring", text:"coe-monitor.status.noconfig"});
             return;
         }
         
-        node.filterNodeNumber = config.filterNodeNumber ? parseInt(config.filterNodeNumber) : null;
-        node.filterDataType = config.filterDataType || 'all';
+        node.lang = node.cmiConfig?.lang || "en";
+        node.coeVersion = node.cmiConfig.coeVersion || 1;
+        node.filterNodeNumber = Validate.node(config.filterNodeNumber, true);
+        node.filterDataType = Validate.type(config.filterDataType);
         node.includeRaw = config.includeRaw || false;
+
+        const isFilteringByNode = (node.filterNodeNumber !== null && node.filterNodeNumber !== 0);
+        const isFilteringByDataType = node.filterDataType.isDigital !== null;
+        const filterText = (!isFilteringByNode && !isFilteringByDataType) ? "" : "ᐅ" + node.filterDataType.short + " " + node.filterNodeNumber;
 
         let packetCount = 0;
         let lastUpdate = Date.now();
@@ -41,17 +45,15 @@ module.exports = function(RED) {
             for (let canNode of received.data) {
                 if (!canNode) continue;
 
-                if (node.filterNodeNumber !== null && // Filter by Node Number
-                    node.filterNodeNumber !== 0 && 
-                    canNode.nodeNumber !== node.filterNodeNumber) {
+                if (isFilteringByNode && canNode.nodeNumber !== node.filterNodeNumber) {
                     continue;
                 }
                 
                 const isDigital = (canNode.dataType === 'digital'); // Filter by Data Type
                 const isAnalog = !isDigital;
                 
-                if (node.filterDataType === 'analog' && !isAnalog) continue;
-                if (node.filterDataType === 'digital' && !isDigital) continue;
+                if (node.filterDataType.long === 'analog' && !isAnalog) continue;
+                if (node.filterDataType.long === 'digital' && !isDigital) continue;
                 
                 packetCount++;
                 lastUpdate = Date.now();
@@ -59,12 +61,12 @@ module.exports = function(RED) {
                 // Build message
                 const msg = {
                     payload: {
-                        timestamp: new Date().toISOString(),
                         sourceIP: received.sourceIP,
                         version: received.version,
                         nodeNumber: canNode.nodeNumber,
                         ...(canNode.blockNumber && { blockNumber: canNode.blockNumber}),
-                        dataType: canNode.dataType
+                        dataType: canNode.dataType,
+                        timestamp: new Date().toISOString()
                     },
                     topic: `coe/monitor/${canNode.nodeNumber}/block/${canNode.dataType}`
                 };
@@ -74,7 +76,7 @@ module.exports = function(RED) {
 
                 if (canNode.outputs) {
                     Object.entries(canNode.outputs).forEach(([outputNumber, output]) => {
-                        const unitInfo = getUnitInfo(output.unit, lang);
+                        const unitInfo = getUnitInfo(output.unit, node.lang);
                         const translationKey = getDigitalStateKey(output.unit, output.value, "coe-monitor.status.");
 
                         valuesDetailed[outputNumber] = {
@@ -106,7 +108,7 @@ module.exports = function(RED) {
         };
 
         node.cmiConfig.registerListener(listener);
-        node.status({fill: "grey", shape: "ring", text: node._("coe-monitor.status.monitoring") + "..."});
+        node.status({fill: "grey", shape: "ring", text: node._("coe-monitor.status.monitoring") + " " + filterText + "..."});
 
         // Status Update Timer (shows last activity)
         const statusTimer = setInterval(() => {
@@ -115,7 +117,7 @@ module.exports = function(RED) {
                 node.status({
                     fill: "yellow", 
                     shape: "ring", 
-                    text: node._("coe-monitor.status.monitoring") + ` ${secsSinceUpdate}s - ${packetCount} Pkt. [v${coeVersion}]`
+                    text: node._("coe-monitor.status.monitoring") + " " + filterText + ` ${secsSinceUpdate}s - ${packetCount} Pkt. [v${node.coeVersion}]`
                 });
             }
         }, 5000);

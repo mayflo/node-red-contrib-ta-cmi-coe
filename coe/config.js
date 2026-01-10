@@ -19,12 +19,11 @@ module.exports = function(RED) {
         RED.nodes.createNode(this, config);
         const node = this;
     
-        let langSetting = (RED.settings.lang || "").toLowerCase();
-        switch (true) {
-        case langSetting.startsWith("de"):
+        // Determine backend language
+        const globalLang = (RED.settings?.lang || "en").toLowerCase();
+        if (globalLang.startsWith("de")) {
             node.lang = "de";
-            break;
-        default:
+        } else {
             node.lang = "en";
         }
 

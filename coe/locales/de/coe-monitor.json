@@ -12,6 +12,7 @@
             "filterNodeNumber": "0 = alle"
         },
         "status": {
+            "noconfig": "Nicht konfiguriert",
             "monitoring": "Lauscht",
             "node": "Knoten",
             "open": "Offen",

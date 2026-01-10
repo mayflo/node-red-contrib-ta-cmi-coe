@@ -15,7 +15,7 @@
         "status": {
             "noconfig": "No config",
             "queued": "queued",
-            "ready": "Ready",
+            "ready": "ready",
             "merged": "Sent",
             "retransmit": "Resent",
             "blocked": "Blocked"

@@ -12,6 +12,8 @@
             "nodeNumber": "1-62, 0 = beliebig"
         },
         "status": {
+            "noconfig": "Nicht konfiguriert",
+            "initialTimeout": "Initial Timeout (keine Daten)",
             "waiting": "wartet",
             "waitingAny": "wartet (alle Knoten)",
             "open": "Offen",

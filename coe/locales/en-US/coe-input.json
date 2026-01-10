@@ -12,6 +12,8 @@
             "nodeNumber": "1-62, 0 = any"
         },
         "status": {
+            "noconfig": "No config",
+            "initialTimeout": "Initial Timeout (no data)",
             "waiting": "waiting",
             "waitingAny": "waiting (any node)",
             "open": "Open",

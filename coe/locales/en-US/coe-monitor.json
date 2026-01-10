@@ -12,6 +12,7 @@
             "filterNodeNumber": "0 = all"
         },
         "status": {
+            "noconfig": "No config",
             "monitoring": "Monitoring",
             "node": "Node",
             "open": "Open",

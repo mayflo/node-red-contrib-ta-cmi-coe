@@ -1,7 +1,13 @@
 ## Changelog
 
+### Version 1.1.2
+ - Fixes wrong delta supressed error
+ - Fixes early timeout error
+ - Fixes lang type error (missing config node)
+ - Added node & output number validation
+
 ### Version 1.1.1
- - Fix wrong V2 output number
+ - Fixes wrong V2 output number
 
 ### Version 1.1.0
  - Change to variable message size (similar to CoE V2 approach)
