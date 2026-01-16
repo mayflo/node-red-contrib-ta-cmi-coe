@@ -41,7 +41,7 @@ module.exports = function(RED) {
         }
         
         // Filter configuration parameters
-        node.minChange = parseFloat(config.minChange) || 1;
+        node.minChange = parseFloat(config.minChange) || 0;
         node.blockingTime = parseFloat(config.blockingTime) || 10; // Seconds
         node.maxInterval = parseFloat(config.maxInterval) || 5;  // Minutes
         

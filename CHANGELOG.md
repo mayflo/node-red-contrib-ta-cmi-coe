@@ -1,5 +1,8 @@
 ## Changelog
 
+### Version 1.1.3
+ - Fixes delta default value (output node)
+
 ### Version 1.1.2
  - Fixes wrong delta supressed error
  - Fixes early timeout error
